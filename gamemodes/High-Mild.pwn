@@ -50286,31 +50286,3 @@ CMD:call(playerid, params[])
 	}
 	return 1;
 }
-
-CMD:createbillboard(playerid, params[])
-{
-	static
-	    id = -1;
-
-    if (PlayerData[playerid][pAdmin] < 5)
-	    return SendErrorMessage(playerid, "Kamu tidak diizinkan menggunakan perintah ini!");
-
-	id = Billboard_Create(playerid, -1);
-
-	if (id == -1)
-	    return SendErrorMessage(playerid, "The server has reached the limit for billboards.");
-
-	SendServerMessage(playerid, "You have successfully created billboard ID: %d.", id);
-	return 1;
-}
-
-CMD:billboards(playerid, params[])
-{
-	if(PlayerData[playerid][pAdmin] < 1)
-	{
-	    SendErrorMessage(playerid, "You are not authorized to use this command");
-	    return 1;
-	}
-	ViewBillboards(playerid);
-	return 1;
-}
