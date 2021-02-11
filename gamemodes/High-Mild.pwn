@@ -2616,7 +2616,7 @@ public OnDialogResponse(playerid, dialogid, response, listitem, inputtext[])
             {
                 case 0:
 				{
-				SendClientMessage(playerid, COLOR_WHITE, "{03fcc2}HELP >> General Commands");
+				SendClientMessage(playerid, COLOR_WHITE, "{03fcc2}HELP >> General Command");
 	            SendClientMessage(playerid, COLOR_WHITE, "{ADDBE6}GENERAL: {FFFFFF}/changepass, /lastlogged, /username, /properties, /assistance, /cancelassistance, /tog, /stats, /report, /acc.");
 	            SendClientMessage(playerid, COLOR_WHITE, "{ADDBE6}GENERAL: {FFFFFF}/inventory, /switch, /search, /searchbp, /approve, /faq, /sell, /paint, /drink, /bank, /cook, /vest, /ammo, /unequip.");
 			    SendClientMessage(playerid, COLOR_WHITE, "{ADDBE6}GENERAL: {FFFFFF}/usekit, /id, /drop, /flist, /crates, /fill, /pay, /gps, /open, /usedrug, /breakcuffs, /backpack, /invoices, /tickets.");
