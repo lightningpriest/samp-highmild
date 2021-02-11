@@ -66,7 +66,7 @@
 
 #define SQL_HOSTNAME "localhost"
 #define SQL_USERNAME "root"
-#define SQL_DATABASE "clrp"
+#define SQL_DATABASE "highmild"
 #define SQL_PASSWORD ""
 
 #define SERVER_NAME 	 "[0.3-DL] High Mild Roleplay | Beta Test"
