@@ -31705,7 +31705,7 @@ Dialog:TutorialConfirm(playerid, response, listitem, inputtext[])
 		SendClientMessage(playerid, COLOR_WHITE, string);
 		format(string, sizeof(string), "{FFFFFF}Selamat datang di {FFFF00}Red County!");
 		SendClientMessage(playerid, COLOR_WHITE, string);
-		format(string, sizeof(string), "{FFFFFF}Sebagai permulaan, anda berhak menerima uang sebesar {00FF00$250 {FFFFFF}di kantong dan {00FF00}$500 {FFFFFF}di rekening bank.");
+		format(string, sizeof(string), "{FFFFFF}Sebagai permulaan, anda berhak menerima uang sebesar {00FF00}$500 {FFFFFF}di kantong dan {00FF00}$750 {FFFFFF}di rekening bank.");
 		SendClientMessage(playerid, COLOR_WHITE, string);
 		format(string, sizeof(string), "{FFFFFF}Selamat bermain, apabila ingin melihat bantuan gunakan perintah {FFFF00}/help {FFFFFF}atau hubungi admin yang sedang bertugas.");
 		SendClientMessage(playerid, COLOR_WHITE, string);
