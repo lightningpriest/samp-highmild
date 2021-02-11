@@ -2754,9 +2754,18 @@ public OnDialogResponse(playerid, dialogid, response, listitem, inputtext[])
 				}
                 case 2:
                 {
-				Inventory_Add(playerid, "Heroin Seeds", 1577, 10);
-				PlayerData[playerid][pMoney] -= 250;
-				SendClientMessage(playerid, COLOR_WHITE, "{ADDBE6}SEEDS: {FFFFFF}Kamu berhasil membeli {FF0000}Heroin Seeds {FFFFFF}dengan harga {00FF00}$250.");
+				 if (PlayerData[playerid][pJob] != JOB_MECHANIC)
+	             return SendErrorMessage(playerid, "Kamu bukan seorang mekanik!");
+
+	             if(!Inventory_HasItem(playerid, "Component"))
+	             return SendErrorMessage(playerid, "Kamu tidak memiliki Component.");
+
+	             if(Inventory_Count(playerid, "Component") < 250)
+	             return SendErrorMessage(playerid, "Kamu tidak memiliki Component yang cukup.");
+
+	             SetTimerEx("InstallNosTimer", 60000, false, "dd", playerid);
+	             SendClientMessage(playerid, COLOR_WHITE, "{ADDBE6}WORKSHOP: {FFFFFF}Harap tunggu {FFFF00}1 menit {FFFFFF}agar NOS dapat terpasang.");
+	             return 1;
 				}
             }
         }
@@ -42589,7 +42598,7 @@ CMD:mechanicmenu(playerid, params[])
 if (PlayerData[playerid][pJob] != JOB_MECHANIC)
 return SendErrorMessage(playerid, "Kamu bukan seorang mekanik!");
 	    
-ShowPlayerDialog(playerid, DIALOG_MECHANICMENU, DIALOG_STYLE_LIST, "Mechanic Menu", "Repair Engine\nRepair Body\nUpgrade Body", "Choose", "Cancel");
+ShowPlayerDialog(playerid, DIALOG_MECHANICMENU, DIALOG_STYLE_LIST, "Mechanic Menu", "Repair Engine\nRepair Body\nInstall NOS", "Choose", "Cancel");
 
 return 1;
 }
