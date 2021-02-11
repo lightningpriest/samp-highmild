@@ -42537,20 +42537,13 @@ ShowPlayerDialog(playerid, DIALOG_HELPCMD, DIALOG_STYLE_LIST, "Help Commands", "
 return 1;
 }
 
-CMD:mechanichelp(playerid, params[])
+CMD:mechanicmenu(playerid, params[])
 {
 if (PlayerData[playerid][pJob] != JOB_MECHANIC)
 return SendErrorMessage(playerid, "Kamu bukan seorang mekanik!");
 	    
-ShowPlayerDialog(playerid, DIALOG_MECHANICMENU, DIALOG_STYLE_TABLIST_HEADERS, "Mechanic Commands Help",
-"Perintah\tFungsi\tKomponen yang dibutuhkan\n\
-/repairengine\tUntuk memperbaiki mesin kendaraan\t200 Component\n\
-/repairbody\tUntuk memperbaiki body kendaraan\t100 Component\n\
-/repairwheel\tUntuk memperbaiki ban kendaraan\t50 Component\n\
-/upgradeengine\tUntuk mengupgrade mesin kendaraan\t400 Component\n\
-/upgradebody\tUntuk mengupgrade body kendaraan\t500 Component\n\
-/installspoiler\tUntuk memasang spoiler pada kendaraan\t500 Component",
-"Close", "");
+ShowPlayerDialog(playerid, DIALOG_MECHANICMENU, DIALOG_STYLE_LIST, "Mechanic Menu", "Repair Engine\nRepair Body\nUpgrade Body", "Choose", "Cancel");
+
 return 1;
 }
 
