@@ -2722,15 +2722,35 @@ public OnDialogResponse(playerid, dialogid, response, listitem, inputtext[])
         {
             switch(listitem)
             {
-                listitem 0:
+                case 0:
 				{
-                SendClientMessage(playerid, COLOR_WHITE, "{ADDBE6}SEEDS: {FFFFFF}Kamu berhasil membeli {FF0000}Cocaine Seeds {FFFFFF}dengan harga {00FF00}$250.");
+                 if (PlayerData[playerid][pJob] != JOB_MECHANIC)
+                 return SendErrorMessage(playerid, "Kamu bukan seorang mekanik!");
+ 
+                 if (!Inventory_HasItem(playerid, "Component"))
+                 return SendErrorMessage(playerid, "Kamu tidak memiliki Component.");
+ 
+                 if (Inventory_Count(playerid, "Component") < 200)
+                 return SendErrorMessage(playerid, "Kamu tidak memiliki Component yang cukup.");
+ 
+                 SetTimerEx("EngineRepairTimer", 30000, false, "dd", playerid);
+                 SendClientMessage(playerid, COLOR_WHITE, "{ADDBE6}REPAIR: {FFFFFF}Harap tunggu {FFFF00}30 detik {FFFFFF}agar mesin kendaraan dapat diperbaiki.");
+				 return 1;
                 }
                 case 1:
 				{
-				Inventory_Add(playerid, "Marijuana Seeds", 1578,  10);
-				PlayerData[playerid][pMoney] -= 300;
-				SendClientMessage(playerid, COLOR_WHITE, "{ADDBE6}SEEDS: {FFFFFF}Kamu berhasil membeli {FF0000}Marijuana Seeds {FFFFFF}dengan harga {00FF00}$300.");
+				 if (PlayerData[playerid][pJob] != JOB_MECHANIC)
+	             return SendErrorMessage(playerid, "Kamu bukan seorang mekanik!");
+
+	             if(!Inventory_HasItem(playerid, "Component"))
+	             return SendErrorMessage(playerid, "Kamu tidak memiliki Component.");
+
+	             if(Inventory_Count(playerid, "Component") < 100)
+	             return SendErrorMessage(playerid, "Kamu tidak memiliki Component yang cukup.");
+
+	             SetTimerEx("BodyRepairTimer", 30000, false, "dd", playerid);
+	             SendClientMessage(playerid, COLOR_WHITE, "{ADDBE6}REPAIR: {FFFFFF}Harap tunggu {FFFF00}30 detik {FFFFFF}agar body kendaraan dapat diperbaiki.");
+	             return 1;
 				}
                 case 2:
                 {
