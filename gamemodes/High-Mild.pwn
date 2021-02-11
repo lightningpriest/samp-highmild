@@ -233,7 +233,7 @@
 #define DIALOG_CHANGELOG 813624
 #define DIALOG_SALARY 13371
 #define DIALOG_HELPCMD 18821
-#define DIALOG_MECHANICMENU 77162
+#define DIALOG_MECHANICMENU 16442
 #define DIALOG_BUYCOMPO 11134
 #define DIALOG_WORKSHOP 13733
 #define DIALOG_TOGGLE 17763
@@ -2710,6 +2710,33 @@ public OnDialogResponse(playerid, dialogid, response, listitem, inputtext[])
 				{
 				SendClientMessage(playerid, COLOR_SERVER, "RADIO: {FFFFFF}/r, r2, r3, r4");
 				SendClientMessage(playerid, COLOR_SERVER, "CHANNEL: {FFFFFF}/channel, /channel2, /channel3, /channel4");
+				}
+            }
+        }
+        return 1;
+}
+
+    if(dialogid == DIALOG_MECHANICMENU)
+    {
+        if(response)
+        {
+            switch(listitem)
+            {
+                listitem 0:
+				{
+                SendClientMessage(playerid, COLOR_WHITE, "{ADDBE6}SEEDS: {FFFFFF}Kamu berhasil membeli {FF0000}Cocaine Seeds {FFFFFF}dengan harga {00FF00}$250.");
+                }
+                case 1:
+				{
+				Inventory_Add(playerid, "Marijuana Seeds", 1578,  10);
+				PlayerData[playerid][pMoney] -= 300;
+				SendClientMessage(playerid, COLOR_WHITE, "{ADDBE6}SEEDS: {FFFFFF}Kamu berhasil membeli {FF0000}Marijuana Seeds {FFFFFF}dengan harga {00FF00}$300.");
+				}
+                case 2:
+                {
+				Inventory_Add(playerid, "Heroin Seeds", 1577, 10);
+				PlayerData[playerid][pMoney] -= 250;
+				SendClientMessage(playerid, COLOR_WHITE, "{ADDBE6}SEEDS: {FFFFFF}Kamu berhasil membeli {FF0000}Heroin Seeds {FFFFFF}dengan harga {00FF00}$250.");
 				}
             }
         }
