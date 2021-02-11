@@ -50314,14 +50314,3 @@ CMD:billboards(playerid, params[])
 	ViewBillboards(playerid);
 	return 1;
 }
-
-CMD:mybillboard(playerid, params[])
-{
-	if(PlayerData[playerid][pOwnsBillboard] == -1)
-	{
-	    SendErrorMessage(playerid, "You do not own a billboard");
-	    return 1;
-	}
-    Dialog_Show(playerid, MyBillboardMenu, DIALOG_STYLE_LIST, "Manage Billboard", "Edit Message\nUnrent Billboard", "Proceed", "Cancel");
-    return 1;
-}
