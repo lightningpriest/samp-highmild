@@ -2616,6 +2616,7 @@ public OnDialogResponse(playerid, dialogid, response, listitem, inputtext[])
             {
                 case 0:
 				{
+				SendClientMessage(playerid, COLOR_WHITE, "{03fcc2}HELP >> General Commands");
 	            SendClientMessage(playerid, COLOR_WHITE, "{ADDBE6}GENERAL: {FFFFFF}/changepass, /lastlogged, /username, /properties, /assistance, /cancelassistance, /tog, /stats, /report, /acc.");
 	            SendClientMessage(playerid, COLOR_WHITE, "{ADDBE6}GENERAL: {FFFFFF}/inventory, /switch, /search, /searchbp, /approve, /faq, /sell, /paint, /drink, /bank, /cook, /vest, /ammo, /unequip.");
 			    SendClientMessage(playerid, COLOR_WHITE, "{ADDBE6}GENERAL: {FFFFFF}/usekit, /id, /drop, /flist, /crates, /fill, /pay, /gps, /open, /usedrug, /breakcuffs, /backpack, /invoices, /tickets.");
@@ -2625,6 +2626,7 @@ public OnDialogResponse(playerid, dialogid, response, listitem, inputtext[])
                 }
                 case 1:
 				{
+				SendClientMessage(playerid, COLOR_WHITE, "{03fcc2}HELP >> Chat Commands");
    			    SendClientMessage(playerid, COLOR_WHITE, "{ADDBE6}CHAT: {FFFFFF}/o, /b, /w, /s, /or, /l, /pintercom.");
 				}
                 case 2:
@@ -2658,15 +2660,18 @@ public OnDialogResponse(playerid, dialogid, response, listitem, inputtext[])
 			}
 			    case 3:
                 {
+				SendClientMessage(playerid, COLOR_WHITE, "{03fcc2}HELP >> Business Commands");
 				SendClientMessage(playerid, COLOR_WHITE, "{ADDBE6}BUSINESS: {FFFFFF}/buy, /abandon, /lock, /vault, /products, /binfo, /bname, /bmessage, /bshipment.");
 				}
 				case 4:
                 {
+				SendClientMessage(playerid, COLOR_WHITE, "{03fcc2}HELP >> House Commands");
 				SendClientMessage(playerid, COLOR_WHITE, "{ADDBE6}HOUSE: {FFFFFF}/buy, /abandon, /lock, /storage, /furniture, /buyrack, /gunrack, /deleterack.");
                 SendClientMessage(playerid, COLOR_WHITE, "{ADDBE6}HOUSE: {FFFFFF}/doorbell, /switch.");
 				}
 				case 5:
-                {
+                {	
+				SendClientMessage(playerid, COLOR_WHITE, "{03fcc2}HELP >> Vehicle Commands");
 			    SendClientMessage(playerid, COLOR_WHITE, "{ADDBE6}VEHICLE: {FFFFFF}/park, /lock, /abandon, /windows, /window /refuel, /unmod, /trunk, /listcars, /engine, /lights, /hood, /tow.");
 				}
 				case 6:
@@ -2687,6 +2692,7 @@ public OnDialogResponse(playerid, dialogid, response, listitem, inputtext[])
 			}
 			    case 7:
 				{
+				SendClientMessage(playerid, COLOR_WHITE, "{03fcc2}HELP >> Animation Commands");
 				SendClientMessage(playerid, COLOR_SERVER, "ANIMATION: {FFFFFF}/dance, /handsup, /bat, /slap, /bar, /wash, /lay, /workout, /blowjob, /bomb.");
 			    SendClientMessage(playerid, COLOR_SERVER, "ANIMATION: {FFFFFF}/carry, /crack, /sleep, /jump, /deal, /dancing, /eating, /puke, /gsign, /chat.");
 			    SendClientMessage(playerid, COLOR_SERVER, "ANIMATION: {FFFFFF}/goggles, /spray, /throw, /swipe, /office, /kiss, /knife, /cpr, /scratch, /point.");
@@ -2696,18 +2702,22 @@ public OnDialogResponse(playerid, dialogid, response, listitem, inputtext[])
 				}
 				case 8:
 				{
+				SendClientMessage(playerid, COLOR_WHITE, "{03fcc2}HELP >> Phone Commands");
 				SendClientMessage(playerid, COLOR_SERVER, "{ADDBE6}PHONE: {FFFFFF}/phone, /call, /pickup, /hangup, /text.");
 				}
 				case 9:
 				{
+				SendClientMessage(playerid, COLOR_WHITE, "{03fcc2}HELP >> Donator Commands");
 				SendClientMessage(playerid, COLOR_SERVER, "DONATOR: {FFFFFF}/toggold /dooc /tog(donator).");	
 				}
 				case 10:
 				{
+				SendClientMessage(playerid, COLOR_WHITE, "{03fcc2}HELP >> Bank Commands");
 				SendClientMessage(playerid, COLOR_SERVER, "BANK: {FFFFFF}/bank, /atm, /registercard.");	
 				}
 				case 11:
 				{
+				SendClientMessage(playerid, COLOR_WHITE, "{03fcc2}HELP >> Radio Commands");
 				SendClientMessage(playerid, COLOR_SERVER, "RADIO: {FFFFFF}/r, r2, r3, r4");
 				SendClientMessage(playerid, COLOR_SERVER, "CHANNEL: {FFFFFF}/channel, /channel2, /channel3, /channel4");
 				}
@@ -50334,3 +50344,4 @@ CMD:call(playerid, params[])
 	}
 	return 1;
 }
+
