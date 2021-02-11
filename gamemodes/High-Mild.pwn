@@ -62,7 +62,6 @@
 #include <YSI\y_ini>
 #include <discord-connector>
 #include <callbacks>
-#include <AC>
 
 
 #define SQL_HOSTNAME "localhost"
