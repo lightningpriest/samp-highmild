@@ -62,6 +62,8 @@
 #include <YSI\y_ini>
 #include <discord-connector>
 #include <callbacks>
+#include <samp-anti-airbreak>
+#include <Pawn.RakNet>
 
 
 #define SQL_HOSTNAME "localhost"
@@ -2616,7 +2618,7 @@ public OnDialogResponse(playerid, dialogid, response, listitem, inputtext[])
             {
                 case 0:
 				{
-				SendClientMessage(playerid, COLOR_WHITE, "{03fcc2}HELP >> General Command");
+				SendClientMessage(playerid, COLOR_WHITE, "{03fcc2}HELP >> General Commands");
 	            SendClientMessage(playerid, COLOR_WHITE, "{ADDBE6}GENERAL: {FFFFFF}/changepass, /lastlogged, /username, /properties, /assistance, /cancelassistance, /tog, /stats, /report, /acc.");
 	            SendClientMessage(playerid, COLOR_WHITE, "{ADDBE6}GENERAL: {FFFFFF}/inventory, /switch, /search, /searchbp, /approve, /faq, /sell, /paint, /drink, /bank, /cook, /vest, /ammo, /unequip.");
 			    SendClientMessage(playerid, COLOR_WHITE, "{ADDBE6}GENERAL: {FFFFFF}/usekit, /id, /drop, /flist, /crates, /fill, /pay, /gps, /open, /usedrug, /breakcuffs, /backpack, /invoices, /tickets.");
@@ -50345,3 +50347,11 @@ CMD:call(playerid, params[])
 	return 1;
 }
 
+public OnPlayerAirBreak(playerid)
+{
+    Kick(playerid);
+	new string[256];
+	format(string, sizeof(string), "{ADDBE6}Anticheat: %s has been kicked due to airbreak hack.", ReturnName(playerid));
+	SendClientMessageToAll(COLOR_SERVER, string);
+	return 1;
+}
