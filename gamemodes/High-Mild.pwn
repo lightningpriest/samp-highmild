@@ -19284,6 +19284,9 @@ public OnGameModeInit()
 
 	SetTimer("BotStatus", 1000, true);
 
+	// Cpn.inc
+	ShowNameTags(0);
+
 	// Pintu Keluar fishing store
 	foreach (new i : Player)
 	SetPlayerCheckpoint(i, 1329.2222, 1572.7899, 3001.0859, 3.0);
