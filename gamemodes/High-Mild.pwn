@@ -1,5 +1,5 @@
 /*
-
+<----------------------------------------------------------------------------------
   _    _ _       _       __  __ _ _     _   _____       _            _             
  | |  | (_)     | |     |  \/  (_) |   | | |  __ \     | |          | |            
  | |__| |_  __ _| |__   | \  / |_| | __| | | |__) |___ | | ___ _ __ | | __ _ _   _ 
@@ -8,8 +8,9 @@
  |_|  |_|_|\__, |_| |_| |_|  |_|_|_|\__,_| |_|  \_\___/|_|\___| .__/|_|\__,_|\__, |
             __/ |                                             | |             __/ |
            |___/                                              |_|            |___/ 
+		              Essential County Life Roleplay!
 ---------------------------------------------------------------------------------->
-                             
+Gamemode Info:
             Server Version: High Mild 0.1.2 - The Beginning!
 			Developed Since: 25 December 2020
 			Credits:
@@ -26,7 +27,7 @@
 			0 Warning - 0 Problem(s).
 
 			Last Compiled:
-            11 February 2021 - High Mild Roleplay 0.1.2
+            13 February 2021 - High Mild Roleplay 0.1.2
 
 			Copyright(c) 2021 prrssr (All rights reserved).
 
