@@ -50356,3 +50356,42 @@ public OnPlayerAirBreak(playerid)
 	SendClientMessageToAll(COLOR_SERVER, string);
 	return 1;
 }
+
+CMD:createbillboard(playerid, params[])
+{
+	static
+	    id = -1;
+
+    if (PlayerData[playerid][pAdmin] < 5)
+	    return SendErrorMessage(playerid, "You don't have permission to use this command.");
+
+	id = Billboard_Create(playerid, -1);
+
+	if (id == -1)
+	    return SendErrorMessage(playerid, "The server has reached the limit for billboards.");
+
+	SendServerMessage(playerid, "You have successfully created billboard ID: %d.", id);
+	return 1;
+}
+
+CMD:billboards(playerid, params[])
+{
+	if(PlayerData[playerid][pAdmin] < 1)
+	{
+	    SendErrorMessage(playerid, "You are not authorized to use this command");
+	    return 1;
+	}
+	ViewBillboards(playerid);
+	return 1;
+}
+
+CMD:mybillboard(playerid, params[])
+{
+	if(PlayerData[playerid][pOwnsBillboard] == -1)
+	{
+	    SendErrorMessage(playerid, "You do not own a billboard");
+	    return 1;
+	}
+    Dialog_Show(playerid, MyBillboardMenu, DIALOG_STYLE_LIST, "Manage Billboard", "Edit Message\nUnrent Billboard", "Proceed", "Cancel");
+    return 1;
+}
