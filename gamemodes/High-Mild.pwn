@@ -42115,8 +42115,8 @@ CMD:pickup(playerid, params[])
 	PlayerData[playerid][pIncomingCall] = 0;
 	PlayerData[targetid][pIncomingCall] = 0;
 
-	SendClientMessage(playerid, COLOR_YELLOW, "[SERVER]:{FFFFFF} You have answered the call.");
-	SendClientMessage(targetid, COLOR_YELLOW, "[SERVER]:{FFFFFF} The other line has accepted the call.");
+	SendClientMessage(playerid, COLOR_SERVER, "SERVER:{FFFFFF} You have answered the call.");
+	SendClientMessage(targetid, COLOR_SERVER, "SERVER:{FFFFFF} The other line has accepted the call.");
 
 	SendNearbyMessage(playerid, 30.0, COLOR_PURPLE, "** %s has accepted the incoming call.", ReturnName(playerid, 0));
 	return 1;
