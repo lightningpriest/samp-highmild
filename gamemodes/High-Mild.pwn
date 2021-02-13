@@ -64,6 +64,7 @@
 #include <callbacks>
 #include <samp-anti-airbreak>
 #include <Pawn.RakNet>
+#include <cpn>
 
 
 #define SQL_HOSTNAME "localhost"
