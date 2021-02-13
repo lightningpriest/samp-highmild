@@ -1848,7 +1848,7 @@ native IsValidVehicle(vehicleid);
 native WP_Hash(buffer[], len, const str[]);
 
 main() {
-	print("[Status] PRP 0.3.2 successfully loaded.");
+	print("[Server Status] High Mild v0.1.2 successfully loaded.");
 	print("[Server Credits] >> prrssr - Emmet - Risky - benjaminjones");
 }
 
