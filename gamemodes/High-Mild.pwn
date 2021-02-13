@@ -50347,15 +50347,6 @@ CMD:call(playerid, params[])
 	return 1;
 }
 
-public OnPlayerAirBreak(playerid)
-{
-    Kick(playerid);
-	new string[256];
-	format(string, sizeof(string), "{ADDBE6}Anticheat: %s has been kicked due to airbreak hack.", ReturnName(playerid));
-	SendClientMessageToAll(COLOR_SERVER, string);
-	return 1;
-}
-
 CMD:createbillboard(playerid, params[])
 {
 	static
@@ -50393,4 +50384,13 @@ CMD:mybillboard(playerid, params[])
 	}
     Dialog_Show(playerid, MyBillboardMenu, DIALOG_STYLE_LIST, "Manage Billboard", "Edit Message\nUnrent Billboard", "Proceed", "Cancel");
     return 1;
+}
+
+public OnPlayerAirBreak(playerid)
+{
+    Kick(playerid);
+	new string[256];
+	format(string, sizeof(string), "{ADDBE6}Anticheat: %s has been kicked due to airbreak hack.", ReturnName(playerid));
+	SendClientMessageToAll(COLOR_SERVER, string);
+	return 1;
 }
