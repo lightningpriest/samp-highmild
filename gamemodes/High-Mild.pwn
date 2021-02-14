@@ -50400,3 +50400,9 @@ public OnPlayerAirBreak(playerid)
 	SendClientMessageToAll(COLOR_SERVER, string);
 	return 1;
 }
+
+public OnPlayerCommandPerformed(playerid, cmdtext[], success)
+{
+	if(!success) return SendClientMessage(playerid, COLOR_GREY, "Unknown commands, type /help for show commands list");
+	return 1;
+}
