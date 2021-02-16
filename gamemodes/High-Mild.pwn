@@ -36838,33 +36838,6 @@ CMD:hhelp(playerid, params[])
 	return 1;
 }
 
-/*CMD:dynamichelp(playerid, params[]) ---> UN-COMMENT THIS IF YOU WANNA USE SENDCLIENTMESSAGE.
-{
-	if (PlayerData[playerid][pAdmin] < 5)
-	    return 1;
-
-	SendClientMessage(playerid, COLOR_CLIENT, "BUSSINESS:{FFFFFF} /createbiz, /editbiz, destroybiz, /bizstate.");
-    SendClientMessage(playerid, COLOR_CLIENT, "HOUSE:{FFFFFF} /createhouse, /destroyhouse, /edithouse.");
-	SendClientMessage(playerid, COLOR_CLIENT, "PUMP:{FFFFFF} /createpump, /setpump, /destroypump.");
-	SendClientMessage(playerid, COLOR_CLIENT, "ATM:{FFFFFF} /createatm, /destroyatm.");
-	SendClientMessage(playerid, COLOR_CLIENT, "DETECTOR:{FFFFFF} /createdetector, /destroydetector.");
-	SendClientMessage(playerid, COLOR_CLIENT, "ARREST:{FFFFFF} /createarrest, /destroyarrest.");
-	SendClientMessage(playerid, COLOR_CLIENT, "BILLBOARD:{FFFFFF} /createbillboard, /destroybillboard, /editbillboard.");
-	SendClientMessage(playerid, COLOR_CLIENT, "ENTRANCE:{FFFFFF} /createentrance, /editentrance, /destroyentrance.");
-	SendClientMessage(playerid, COLOR_CLIENT, "CRATE:{FFFFFF} /createcrate, /destroycrate.");
-	SendClientMessage(playerid, COLOR_CLIENT, "GATE:{FFFFFF} /creategate, /editgate, /destroygate.");
-	SendClientMessage(playerid, COLOR_CLIENT, "CAR:{FFFFFF} /createcar, /destroycar, /editcar.");
-	SendClientMessage(playerid, COLOR_CLIENT, "FACTION:{FFFFFF} /createfaction, /editfaction, /destroyfaction.");
-	SendClientMessage(playerid, COLOR_CLIENT, "EVENDOR:{FFFFFF} /createvendor, /destroyvendor.");
-	SendClientMessage(playerid, COLOR_CLIENT, "GARBAGE:{FFFFFF} /creategarbage, /destroygarbage.");
-	SendClientMessage(playerid, COLOR_CLIENT, "GUNRACK:{FFFFFF} /createrack, /editrack, /destroyrack.");
-	SendClientMessage(playerid, COLOR_CLIENT, "JOB:{FFFFFF} /createjob, /destroyjob, /editjob.");
-	SendClientMessage(playerid, COLOR_CLIENT, "IMPOUND:{FFFFFF} /createimpound, /destroyimpound, /editimpound.");
-	SendClientMessage(playerid, COLOR_CLIENT, "GRAFFITI:{FFFFFF} /creategraffiti, /destroygraffiti.");
-	SendClientMessage(playerid, COLOR_CLIENT, "SPEEDCAMERA:{FFFFFF} /createspeed, /destroyspeed.");
-	return 1;
-}*/
-
 CMD:dynamichelp(playerid, params[])
 {
 if (PlayerData[playerid][pAdmin] < 5)
