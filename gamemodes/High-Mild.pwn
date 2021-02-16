@@ -64,6 +64,7 @@ Gamemode Info:
 #include <discord-connector>
 #include <callbacks>
 #include <crashdetect>
+#include <cpn>
 
 
 #define SQL_HOSTNAME "localhost"
@@ -19395,9 +19396,6 @@ public OnGameModeInit()
 
 	SetTimer("BotStatus", 1000, true);
 
-	// Cpn.inc
-	ShowNameTags(0);
-
 	// Pintu Keluar fishing store
 	foreach (new i : Player)
 	SetPlayerCheckpoint(i, 1329.2222, 1572.7899, 3001.0859, 3.0);
@@ -19868,11 +19866,14 @@ public OnGameModeInit()
     CreateDynamicObject(18608, 1282.10, 136.68, 1079.43,   0.00, 0.00, 0.00);
     //Sweeper Vehicle
 	SWEEPER[0] = AddStaticVehicleEx(574,1331.6461,291.1154,19.2798,244.8274, 1, 1, 1);
-	SetVehicleNumberPlate(SWEEPER[0], "STATIC");
+	SetVehicleNumberPlate(SWEEPER[0], "SWEEPER");
+	CoreVehicles[SWEEPER[0]][vehFuel] = 100;
 	SWEEPER[1] = AddStaticVehicleEx(574,1330.5248,288.5705,19.2799,243.9235, 1, 1, 1);
-	SetVehicleNumberPlate(SWEEPER[1], "STATIC");
+	SetVehicleNumberPlate(SWEEPER[1], "SWEEPER");
+	CoreVehicles[SWEEPER[1]][vehFuel] = 100;
 	SWEEPER[2] = AddStaticVehicleEx(574,1329.3560,285.8766,19.2799,246.6437, 1, 1, 1);
-	SetVehicleNumberPlate(SWEEPER[2], "STATIC");
+	SetVehicleNumberPlate(SWEEPER[2], "SWEEPER");
+	CoreVehicles[SWEEPER[2]][vehFuel] = 100;
     //Post Office Business Type Interior
     CreateDynamicObject(19378,-119.4500000,2020.5200000,900.0000000,0.0000000,90.0000000,0.0000000); //
 	CreateDynamicObject(19460,-105.7300000,2020.4500000,901.8100000,0.0000000,0.0000000,0.0000000); //
@@ -28723,8 +28724,12 @@ public OnPlayerSpawn(playerid)
 	SendClientMessageToAll(COLOR_WHITE, string);
 	}
 	// Selamat Datang Message
+	new string[245];
 	foreach (new i : Player)
-	SendServerMessage(i, "{FFFFFF}Selamat datang, {FFFF00}%s.", ReturnName(i, 0));
+	{
+	format(string, sizeof(string), "{ADDBE}SERVER: {FFFFFF}Selamat datang, {FFFF00}%s.", ReturnName(i, 0));
+	SendClientMessageEx(playerid, COLOR_WHITE, string);
+	}
 	// MOTD Player
 	SendClientMessage(playerid, COLOR_WHITE, "{00F8FC}MOTD: {FFFF00}/changelog {FFFFFF}untuk melihat update server.");
 	// Admin MOTD
@@ -38145,7 +38150,7 @@ CMD:goto(playerid, params[])
 	if (sscanf(params, "u", id))
  	{
 	 	SendSyntaxMessage(playerid, "/goto [player or name]");
-		SendClientMessage(playerid, COLOR_ORANGE, "{FFFF00}SYNTAX:{FFFFFF} spawn, prison, house, business, entrance, job, gate, interior, billboard");
+		SendClientMessage(playerid, COLOR_WHITE, "{FFFF00}SYNTAX:{FFFFFF} spawn, prison, house, business, entrance, job, gate, interior, billboard");
 		return 1;
 	}
     if (id == INVALID_PLAYER_ID)
@@ -38153,7 +38158,7 @@ CMD:goto(playerid, params[])
 	    if (sscanf(params, "s[24]S()[64]", type, string))
 		{
 		    SendSyntaxMessage(playerid, "/goto [player or name]");
-			SendClientMessage(playerid, COLOR_ORANGE, "{FFFF00}SYNTAX:{FFFFFF} spawn, prison, house, business, entrance, job, gate, interior, billboard");
+			SendClientMessage(playerid, COLOR_WHITE, "{FFFF00}SYNTAX:{FFFFFF} spawn, prison, house, business, entrance, job, gate, interior, billboard");
 			return 1;
 	    }
 	    if (!strcmp(type, "spawn", true)) {
@@ -38280,8 +38285,8 @@ CMD:goto(playerid, params[])
 		return SendErrorMessage(playerid, "You can't teleport to a player that's not spawned.");
 
 	SendPlayerToPlayer(playerid, id);
-	format(string, sizeof(string), "You have ~y~teleported~w~ to %s.", ReturnName(id, 0));
-	ShowPlayerFooter(playerid, string);
+	format(string, sizeof(string), "{ADDBE6}SERVER: {FFFFFF}You have teleported to {FFFF00}%s.", ReturnName(id, 0));
+	SendClientMessage(playerid, COLOR_WHITE, string);
 	return 1;
 }
 
