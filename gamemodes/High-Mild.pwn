@@ -212,7 +212,6 @@ Gamemode Info:
 #define MAX_SPEED_CAMERAS (100)
 #define MAX_LISTED_ITEMS (10)
 #define MAX_GRAFFITI_POINTS (20)
-#define MAX_METAL_DETECTORS (20)
 
 #define MAX_OWNABLE_CARS (3)
 #define MAX_OWNABLE_HOUSES (3)
@@ -520,7 +519,6 @@ enum playerData {
 	pGraffitiText[64 char],
 	pEditGraffiti,
 	pAdminHide,
-	pDetectorTime,
 	pPicking,
 	pPickCar,
 	pPickTime,
@@ -954,15 +952,6 @@ enum graffitiData {
 	graffitiText[64]
 };
 
-enum detectorData {
-	detectorID,
-	detectorExists,
-	Float:detectorPos[4],
-	detectorInterior,
-	detectorWorld,
-	detectorObject[2]
-};
-
 new g_iHandle;
 new g_StatusOOC;
 new g_TaxVault;
@@ -981,7 +970,6 @@ new PrisonData[prisonData];
 new Float:PrisonCells[24][3];
 
 new GraffitiData[MAX_GRAFFITI_POINTS][graffitiData];
-new MetalDetectors[MAX_METAL_DETECTORS][detectorData];
 new BarricadeData[MAX_BARRICADES][barricadeData];
 
 new VendorData[MAX_VENDORS][vendorData];
@@ -5862,55 +5850,6 @@ stock Float:GetPlayerDistanceFromPlayer(playerid, targetid)
 	return GetPlayerDistanceFromPoint(playerid, x, y, z);
 }
 
-/*CREATE TABLE `detectors` (
-	`detectorID` INT(12) AUTO_INCREMENT,
-	`detectorX` FLOAT DEFAULT 0.0,
-	`detectorY` FLOAT DEFAULT 0.0,
-	`detectorZ` FLOAT DEFAULT 0.0,
-	`detectorAngle` FLOAT DEFAULT 0.0,
-	`detectorInterior` INT(12) DEFAULT 0,
-	`detectorWorld` INT(12) DEFAULT 0,
-	PRIMARY KEY(`detectorID`)
-);*/
-
-stock Detector_Delete(id)
-{
-    if (id != -1 && MetalDetectors[id][detectorExists])
-	{
-	    new
-	        query[64];
-
-	    DestroyDynamicObject(MetalDetectors[id][detectorObject][0]);
-	    DestroyDynamicObject(MetalDetectors[id][detectorObject][1]);
-
-		format(query, sizeof(query), "DELETE FROM `detectors` WHERE `detectorID` = '%d'", MetalDetectors[id][detectorID]);
-		mysql_tquery(g_iHandle, query);
-
-		MetalDetectors[id][detectorID] = 0;
-		MetalDetectors[id][detectorExists] = 0;
-	}
-	return 1;
-}
-
-stock Detector_Refresh(id)
-{
-	if (id != -1 && MetalDetectors[id][detectorExists])
-	{
-	    MetalDetectors[id][detectorObject][0] = CreateDynamicObject(2412, MetalDetectors[id][detectorPos][0], MetalDetectors[id][detectorPos][1], MetalDetectors[id][detectorPos][2] - 0.9, 0.0, 0.0, MetalDetectors[id][detectorPos][3], MetalDetectors[id][detectorWorld], MetalDetectors[id][detectorInterior]);
-		MetalDetectors[id][detectorObject][1] = CreateDynamicObject(2412, MetalDetectors[id][detectorPos][0] + (1.0 * floatsin(-(MetalDetectors[id][detectorPos][3] - 90), degrees)), MetalDetectors[id][detectorPos][1] + (1.0 * floatcos(-(MetalDetectors[id][detectorPos][3] - 90), degrees)), MetalDetectors[id][detectorPos][2] - 0.9, 0.0, 0.0, MetalDetectors[id][detectorPos][3], MetalDetectors[id][detectorWorld], MetalDetectors[id][detectorInterior]);
-	}
-	return 1;
-}
-
-stock Detector_Nearest(playerid)
-{
-    for (new i = 0; i < MAX_METAL_DETECTORS; i ++) if (MetalDetectors[i][detectorExists])
-	{
-	    if (IsPlayerInRangeOfPoint(playerid, 1.0, MetalDetectors[i][detectorPos][0], MetalDetectors[i][detectorPos][1], MetalDetectors[i][detectorPos][2]) && GetPlayerInterior(playerid) == MetalDetectors[i][detectorInterior] && GetPlayerVirtualWorld(playerid) == MetalDetectors[i][detectorWorld])
-	        return i;
-	}
-	return -1;
-}
 
 stock IsPlayerArmed(playerid)
 {
@@ -6832,31 +6771,6 @@ Rack_Refresh(rackid)
 
 		Rack_RefreshGuns(rackid);
         RackData[rackid][rackObjects][4] = CreateDynamicObject(2475, RackData[rackid][rackPos][0], RackData[rackid][rackPos][1], RackData[rackid][rackPos][2], 0.0, 0.0, RackData[rackid][rackPos][3], RackData[rackid][rackWorld], RackData[rackid][rackInterior]);
-	}
-	return 1;
-}
-
-forward Detector_Load();
-public Detector_Load()
-{
-	static
-	    rows,
-	    fields;
-
-	cache_get_data(rows, fields, g_iHandle);
-
-	for (new i = 0; i < rows; i ++) if (i < MAX_METAL_DETECTORS)
-	{
-    	MetalDetectors[i][detectorExists] = 1;
-	    MetalDetectors[i][detectorID] = cache_get_field_int(i, "detectorID");
-	    MetalDetectors[i][detectorPos][0] = cache_get_field_float(i, "detectorX");
-	    MetalDetectors[i][detectorPos][1] = cache_get_field_float(i, "detectorY");
-	    MetalDetectors[i][detectorPos][2] = cache_get_field_float(i, "detectorZ");
-	    MetalDetectors[i][detectorPos][3] = cache_get_field_float(i, "detectorAngle");
-	    MetalDetectors[i][detectorInterior] = cache_get_field_int(i, "detectorInterior");
-	    MetalDetectors[i][detectorWorld] = cache_get_field_int(i, "detectorWorld");
-
-		Detector_Refresh(i);
 	}
 	return 1;
 }
@@ -7788,7 +7702,7 @@ public Advertisement(playerid)
 	new string[120];
 	format(string, sizeof(string), "Advertisement: %s", AdvertiseParams[playerid]);
 	SendClientMessageToAll(COLOR_FADVERT, string);
-	format(string, sizeof(string), "Contact: %s | Ph: %d", ReturnPlayerName(playerid), PlayerData[playerid][pPhone]);
+	format(string, sizeof(string), "Contact: %s | Ph: %d", ReturnName(playerid), PlayerData[playerid][pPhone]);
 	SendClientMessageToAll(COLOR_FADVERT, string);
 	SetTimer("AdTimer", 1800000, false);
 }
@@ -14301,7 +14215,6 @@ ResetStatistics(playerid)
     PlayerData[playerid][pGraffitiColor] = 0;
     PlayerData[playerid][pEditGraffiti] = -1;
     PlayerData[playerid][pAdminHide] = 0;
-    PlayerData[playerid][pDetectorTime] = 0;
     PlayerData[playerid][pPicking] = 0;
     PlayerData[playerid][pPickCar] = -1;
 	PlayerData[playerid][pPickTime] = 0;
@@ -15842,13 +15755,6 @@ public OnGraffitiCreated(id)
 	GraffitiData[id][graffitiID] = cache_insert_id(g_iHandle);
 	Graffiti_Save(id);
 
-	return 1;
-}
-
-forward OnDetectorCreated(id);
-public OnDetectorCreated(id)
-{
-	MetalDetectors[id][detectorID] = cache_insert_id(g_iHandle);
 	return 1;
 }
 
@@ -19113,16 +19019,7 @@ public OnPlayerUpdate(playerid)
 			PlayerData[playerid][pSpeedTime] = 5;
 		}
 	}
-	if (Detector_Nearest(playerid) != -1)
-	{
-		if (IsPlayerArmed(playerid) && gettime() > PlayerData[playerid][pDetectorTime])
-		{
-			PlayerData[playerid][pDetectorTime] = gettime() + 5;
 
-			SendNearbyMessage(playerid, 30.0, COLOR_PURPLE, "** The metal detector sounds off. (( %s ))", ReturnName(playerid, 0));
-			PlayerPlaySoundEx(playerid, 43000);
-		}
-	}
 	if ((keys[0] & KEY_FIRE) && GetPlayerWeapon(playerid) == 42)
 	{
         static
@@ -19539,7 +19436,6 @@ public OnGameModeInit()
     mysql_tquery(g_iHandle, "SELECT * FROM `gunracks`", "Rack_Load", "");
     mysql_tquery(g_iHandle, "SELECT * FROM `speedcameras`", "Speed_Load", "");
     mysql_tquery(g_iHandle, "SELECT * FROM `graffiti`", "Graffiti_Load", "");
-    mysql_tquery(g_iHandle, "SELECT * FROM `detectors`", "Detector_Load", "");
 
     SetModelPreviewRotation(18875, 90.0, 180.0, 0.0);
     SetModelPreviewRotation(2703, -105.0, 0.0, -15.0);
@@ -36980,7 +36876,6 @@ BUSSINESS\t/createbiz, /editbiz, destroybiz, /bizstate\n\
 HOUSE\t/createhouse, /destroyhouse, /edithouse\n\
 PUMP\t/createpump, /setpump, /destroypump\n\
 ATM\t/createatm, /destroyatm\n\
-DETECTOR\t/createdetector, /destroydetector\n\
 ARREST\t/createarrest, /destroyarrest\n\
 BILLBOARD\t/createbillboard, /destroybillboard, /editbillboard\n\
 ENTRANCE\t/createentrance, /editentrance, /destroyentrance\n\
@@ -40425,9 +40320,6 @@ CMD:near(playerid, params[])
     if ((id = Graffiti_Nearest(playerid)) != -1)
  		SendServerMessage(playerid, "{FFFFFF}You are standing near graffiti ID: {FFFF00}%d{FFFFFF}.", id);
 
-    if ((id = Detector_Nearest(playerid)) != -1)
- 		SendServerMessage(playerid, "{FFFFFF}You are standing near detector ID: {FFFF00}%d{FFFFFF}.", id);
-
 	return 1;
 }
 
@@ -42553,7 +42445,7 @@ CMD:storerock(playerid, params[])
 	SetPlayerSpecialAction(playerid, SPECIAL_ACTION_NONE);
 	return 1;
 }
-CMD:mine(playerid, params[])
+/*CMD:mine(playerid, params[])
 {
 	if(DapatBatu[playerid] == 1) { SendClientMessageEx(playerid, COLOR_YELLOW,"You still have a stone, store first ( /storerock )!"); return 1; }
     if(PlayerData[playerid][pThirst] <= 10) { SendErrorMessage(playerid, "You are too tired to work."); return 1; }
@@ -42629,6 +42521,7 @@ CMD:stopmine(playerid, params[])
 	}
 	return 1;
 }
+
 CMD:startmine(playerid, params[])
 {
 //	new String[128];
@@ -42642,6 +42535,7 @@ CMD:startmine(playerid, params[])
 	}
 	return 1;
 }
+*/
 CMD:sellfood(playerid, params[])
 {
 	if (PlayerData[playerid][pJob] != JOB_FOOD_VENDOR)
@@ -50267,53 +50161,6 @@ CMD:ahide(playerid, params[])
 	        SendServerMessage(playerid, "{FFFFFF}You are now visible in the admin list.");
 		}
 	}
-	return 1;
-}
-
-CMD:createdetector(playerid, params[])
-{
-	if (PlayerData[playerid][pAdmin] < 5)
-	    return SendErrorMessage(playerid, "Kamu tidak diizinkan menggunakan perintah ini!");
-
-	static
-	    query[255];
-
-	for (new i = 0; i < MAX_METAL_DETECTORS; i ++) if (!MetalDetectors[i][detectorExists])
-	{
-	    MetalDetectors[i][detectorExists] = 1;
-	    MetalDetectors[i][detectorInterior] = GetPlayerInterior(playerid);
-	    MetalDetectors[i][detectorWorld] = GetPlayerVirtualWorld(playerid);
-
-	    GetPlayerPos(playerid, MetalDetectors[i][detectorPos][0], MetalDetectors[i][detectorPos][1], MetalDetectors[i][detectorPos][2]);
-	    GetPlayerFacingAngle(playerid, MetalDetectors[i][detectorPos][3]);
-
-		format(query, sizeof(query), "INSERT INTO `detectors` (`detectorX`, `detectorY`, `detectorZ`, `detectorAngle`, `detectorInterior`, `detectorWorld`) VALUES('%.4f', '%.4f', '%.4f', '%.4f', '%d', '%d')", MetalDetectors[i][detectorPos][0], MetalDetectors[i][detectorPos][1], MetalDetectors[i][detectorPos][2], MetalDetectors[i][detectorPos][3], MetalDetectors[i][detectorInterior], MetalDetectors[i][detectorWorld]);
-		mysql_tquery(g_iHandle, query, "OnDetectorCreated", "d", i);
-
-	    Detector_Refresh(i);
-	    SendServerMessage(playerid, "{FFFFFF}You have created metal detector ID: {FFFF00}%d{FFFFFF}.", i);
-	    return 1;
-	}
-	SendErrorMessage(playerid, "The server has reached a limit for metal detectors.");
-	return 1;
-}
-
-CMD:destroydetector(playerid, params[])
-{
-	static
-	    id = 0;
-
-    if (PlayerData[playerid][pAdmin] < 5)
-	    return SendErrorMessage(playerid, "Kamu tidak diizinkan menggunakan perintah ini!");
-
-	if (sscanf(params, "d", id))
-	    return SendSyntaxMessage(playerid, "/destroydetector [detector id]");
-
-	if ((id < 0 || id >= MAX_METAL_DETECTORS) || !MetalDetectors[id][detectorExists])
-	    return SendErrorMessage(playerid, "You have specified an invalid detector ID.");
-
-	Detector_Delete(id);
-	SendServerMessage(playerid, "{FFFFFF}You have successfully destroyed detector ID: {FFFF00}%d{FFFFFF}.", id);
 	return 1;
 }
 
