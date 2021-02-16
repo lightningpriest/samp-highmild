@@ -50,23 +50,20 @@ Gamemode Info:
 
 #undef MAX_PLAYERS
 #define MAX_PLAYERS (100)
+#define CGEN_MEMORY 10024
 
-#include <a_mysql.inc>
-#include <foreach.inc>
-#include <easyDialog.inc>
-#include <eSelection.inc>
-#include <progress2.inc>
-#include <sscanf2.inc>
-#include <streamer.inc>
-#include <zcmd.inc>
-#include <geoiplite.inc>
-#include <YSI\y_ini>
+#include <a_mysql>
+#include <foreach>
+#include <easyDialog>
+#include <eSelection>
+#include <progress2>
+#include <sscanf2>
+#include <streamer>
+#include <zcmd>
+#include <geoiplite>
 #include <discord-connector>
 #include <callbacks>
-#include <samp-anti-airbreak>
-#include <Pawn.RakNet>
-#include <cpn>
-#include <calendar>
+#include <crashdetect>
 
 
 #define SQL_HOSTNAME "localhost"
@@ -242,7 +239,13 @@ Gamemode Info:
 #define DIALOG_BUYCOMPO 11134
 #define DIALOG_WORKSHOP 13733
 #define DIALOG_TOGGLE 17763
+#define DIALOG_SWEEPER 17764
 
+new SWEEPER[3];
+new OnSweeping[MAX_PLAYERS];
+new SedangMine[MAX_PLAYERS];
+new SedangMining[MAX_PLAYERS];
+new DapatBatu[MAX_PLAYERS];
 new TruckingCheck[MAX_PLAYERS];
 new Text3D:vehicle3Dtext[MAX_VEHICLES];
 new vehiclecallsign[MAX_VEHICLES];
@@ -292,6 +295,7 @@ enum playerData {
 	pFooterTimer,
 	pReportTime,
 	pHelpTime,
+	pSweeperT,
 	pSpectator,
 	pJailTime,
 	pKicked,
@@ -1960,7 +1964,7 @@ SQL_SaveCharacter(playerid)
 			UpdateWeapons(playerid);
 		}
 	}
-	format(query, sizeof(query), "UPDATE `characters` SET `Created` = '%d', `Gender` = '%d', `Birthdate` = '%s', `Origin` = '%s', `Skin` = '%d', `PosX` = '%.4f', `PosY` = '%.4f', `PosZ` = '%.4f', `PosA` = '%.4f', `Health` = '%.4f', `Interior` = '%d', `World` = '%d', `Hospital` = '%d', `HospitalInt` = '%d', `Money` = '%d', `BankMoney` = '%d', `OwnsBillboard` = '%d', `Savings` = '%d', `Admin` = '%d', `JailTime` = '%d', `Muted` = '%d', `Helper` = '%d'",
+	format(query, sizeof(query), "UPDATE `characters` SET `Created` = '%d', `Gender` = '%d', `Birthdate` = '%s', `Origin` = '%s', `Skin` = '%d', `PosX` = '%.4f', `PosY` = '%.4f', `PosZ` = '%.4f', `PosA` = '%.4f', `Health` = '%.4f', `Interior` = '%d', `World` = '%d', `Hospital` = '%d', `HospitalInt` = '%d', `Money` = '%d', `BankMoney` = '%d', `OwnsBillboard` = '%d', `Savings` = '%d', `Admin` = '%d', `JailTime` = '%d', `Muted` = '%d', `Helper` = '%d', `SwDelay` = '%d'",
 		PlayerData[playerid][pCreated],
 		PlayerData[playerid][pGender],
 		PlayerData[playerid][pBirthdate],
@@ -1982,7 +1986,8 @@ SQL_SaveCharacter(playerid)
 		PlayerData[playerid][pAdmin],
 		PlayerData[playerid][pJailTime],
 		PlayerData[playerid][pMuted],
-  		PlayerData[playerid][pHelper]
+  		PlayerData[playerid][pHelper],
+  		PlayerData[playerid][pSweeperT]
 	);
 	for (new i = 0; i < 13; i ++) {
 		format(query, sizeof(query), "%s, `Gun%d` = '%d', `Ammo%d` = '%d'", query, i + 1, PlayerData[playerid][pGuns][i], i + 1, PlayerData[playerid][pAmmo][i]);
@@ -2584,6 +2589,20 @@ public Advertise(playerid)
 
 public OnDialogResponse(playerid, dialogid, response, listitem, inputtext[])
 {
+	if(dialogid == DIALOG_SWEEPER)
+	{
+		if(response)
+		{
+	     	OnSweeping[playerid] = 1;
+	     	SetPlayerCheckpoint(playerid,1350.9368,277.8350,19.6041,6);
+	     	SendClientMessage(playerid, COLOR_BLUE, "SIDEJOB : {FFFFFF}Follow all of Checkpoints on the map!");
+		}
+		else
+		{
+			RemovePlayerFromVehicle(playerid);
+			SendClientMessage(playerid, COLOR_BLUE, "SIDEJOB : {FFFFFF}You're cancel for work as a {FFFF00}Street Sweeper");
+		}
+	}
     if(dialogid == DIALOG_BUYSEEDS)
     {
         if(response)
@@ -7739,6 +7758,7 @@ public BotStatus(playerid)
 	new string[256];
 	format(string, sizeof(string), "with %d players!", CountingPlayer);
 	DCC_SetBotActivity(string);
+	return 1;
 }
 
 forward PlayerLocationTimer(playerid);
@@ -11880,6 +11900,15 @@ IsValidPlayerName(const str[])
 	}
 	return 1;
 }
+//Sweeper Stocks
+IsSWEEPERCAR(carid)
+{
+	for(new v = 0; v < sizeof(SWEEPER); v++)
+	{
+		if(carid == SWEEPER[v]) return 1;
+	}
+	return 0;
+}
 
 IsAnIP(str[])
 {
@@ -14075,6 +14104,7 @@ ResetStatistics(playerid)
 	PlayerData[playerid][pShowFooter] = 0;
 	PlayerData[playerid][pReportTime] = 0;
 	PlayerData[playerid][pHelpTime] = 0;
+	PlayerData[playerid][pSweeperT] = 0;
 	PlayerData[playerid][pSpectator] = INVALID_PLAYER_ID;
 	PlayerData[playerid][pJailTime] = 0;
 	PlayerData[playerid][pKicked] = 0;
@@ -15018,6 +15048,7 @@ public OnQueryFinished(extraid, threadid)
 			        PlayerData[extraid][pAdmin] = cache_get_field_int(0, "Admin");
 			        PlayerData[extraid][pJailTime] = cache_get_field_int(0, "JailTime");
 			        PlayerData[extraid][pMuted] = cache_get_field_int(0, "Muted");
+			        PlayerData[extraid][pSweeperT] = cache_get_field_int(0, "SwDelay");
 			        PlayerData[extraid][pHelper] = cache_get_field_int(0, "Helper");
 			        PlayerData[extraid][pHouse] = cache_get_field_int(0, "House");
 			        PlayerData[extraid][pBusiness] = cache_get_field_int(0, "Business");
@@ -16414,6 +16445,15 @@ public PlayerCheck()
 		    {
 				PlayerData[i][pMuted] = 0;
 				PlayerData[i][pMuteTime] = 0;
+		    }
+		}
+		else if (PlayerData[i][pSweeperT] && PlayerData[i][pSweeperT] > 0)
+		{
+		    PlayerData[i][pSweeperT]--;
+
+		    if (!PlayerData[i][pSweeperT])
+		    {
+				PlayerData[i][pSweeperT] = 0;
 		    }
 		}
 		else if (PlayerData[i][pGraffiti] != -1 && PlayerData[i][pGraffitiTime] > 0)
@@ -18172,6 +18212,160 @@ public OnPlayerEnterVehicle(playerid, vehicleid, ispassenger)
 
 public OnPlayerEnterCheckpoint(playerid)
 {
+	new Float:Health;
+    if(OnSweeping[playerid] == 1)
+	{
+		GetVehicleHealth(GetPlayerVehicleID(playerid), Health);
+		if(Health > 600)
+		{
+			DisablePlayerCheckpoint(playerid);
+			OnSweeping[playerid] = 2;
+			SetPlayerCheckpoint(playerid,1334.9941,235.7040,19.5229,6);
+		}
+		if(Health < 600)
+		{
+			DisablePlayerCheckpoint(playerid);
+			OnSweeping[playerid] = 0;
+			SetVehicleToRespawn(GetPlayerVehicleID(playerid));
+			SendClientMessage(playerid, COLOR_LIGHTBLUE, "SIDEJOB : {FFFFFF}You failed to work because you hit too many times.");
+		}
+		return 1;
+	}
+    else if(OnSweeping[playerid] == 2)
+	{
+		GetVehicleHealth(GetPlayerVehicleID(playerid), Health);
+		if(Health > 600)
+		{
+			DisablePlayerCheckpoint(playerid);
+			OnSweeping[playerid] = 3;
+			SetPlayerCheckpoint(playerid,1277.7682,257.8689,19.5223,6);
+		}
+		if(Health < 600)
+		{
+			DisablePlayerCheckpoint(playerid);
+			OnSweeping[playerid] = 0;
+			SetVehicleToRespawn(GetPlayerVehicleID(playerid));
+			SendClientMessage(playerid, COLOR_LIGHTBLUE, "SIDEJOB : {FFFFFF}You failed to work because you hit too many times.");
+		}
+		return 1;
+	}
+    else if(OnSweeping[playerid] == 3)
+	{
+		GetVehicleHealth(GetPlayerVehicleID(playerid), Health);
+		if(Health > 600)
+		{
+			DisablePlayerCheckpoint(playerid);
+			OnSweeping[playerid] = 4;
+			SetPlayerCheckpoint(playerid,1245.0890,271.7296,19.5231,6);
+		}
+		if(Health < 600)
+		{
+			DisablePlayerCheckpoint(playerid);
+			OnSweeping[playerid] = 0;
+			SetVehicleToRespawn(GetPlayerVehicleID(playerid));
+			SendClientMessage(playerid, COLOR_LIGHTBLUE, "SIDEJOB : {FFFFFF}You failed to work because you hit too many times.");
+		}
+		return 1;
+	}
+    else if(OnSweeping[playerid] == 4)
+	{
+		GetVehicleHealth(GetPlayerVehicleID(playerid), Health);
+		if(Health > 600)
+		{
+			DisablePlayerCheckpoint(playerid);
+			OnSweeping[playerid] = 5;
+			SetPlayerCheckpoint(playerid,1218.3033,216.2047,19.5262,6);
+		}
+		if(Health < 600)
+		{
+			DisablePlayerCheckpoint(playerid);
+			OnSweeping[playerid] = 0;
+			SetVehicleToRespawn(GetPlayerVehicleID(playerid));
+			SendClientMessage(playerid, COLOR_LIGHTBLUE, "SIDEJOB : {FFFFFF}You failed to work because you hit too many times.");
+		}
+		return 1;
+	}
+    else if(OnSweeping[playerid] == 5)
+	{
+		GetVehicleHealth(GetPlayerVehicleID(playerid), Health);
+		if(Health > 600)
+		{
+			DisablePlayerCheckpoint(playerid);
+			OnSweeping[playerid] = 6;
+			SetPlayerCheckpoint(playerid,1260.4940,183.5058,19.5216,6);
+		}
+		if(Health < 600)
+		{
+			DisablePlayerCheckpoint(playerid);
+			OnSweeping[playerid] = 0;
+			SetVehicleToRespawn(GetPlayerVehicleID(playerid));
+			SendClientMessage(playerid, COLOR_LIGHTBLUE, "SIDEJOB : {FFFFFF}You failed to work because you hit too many times.");
+		}
+		return 1;
+	}
+    else if(OnSweeping[playerid] == 6)
+	{
+		GetVehicleHealth(GetPlayerVehicleID(playerid), Health);
+		if(Health > 600)
+		{
+			DisablePlayerCheckpoint(playerid);
+			OnSweeping[playerid] = 7;
+			SetPlayerCheckpoint(playerid,1289.6492,242.4466,19.5083,6);
+		}
+		if(Health < 600)
+		{
+			DisablePlayerCheckpoint(playerid);
+			OnSweeping[playerid] = 0;
+			SetVehicleToRespawn(GetPlayerVehicleID(playerid));
+			SendClientMessage(playerid, COLOR_LIGHTBLUE, "SIDEJOB : {FFFFFF}You failed to work because you hit too many times.");
+		}
+		return 1;
+	}
+    else if(OnSweeping[playerid] == 7)
+	{
+		GetVehicleHealth(GetPlayerVehicleID(playerid), Health);
+		if(Health > 600)
+		{
+			DisablePlayerCheckpoint(playerid);
+			OnSweeping[playerid] = 8;
+			SetPlayerCheckpoint(playerid,1333.8337,226.0720,19.5238,6);
+		}
+		if(Health < 600)
+		{
+			DisablePlayerCheckpoint(playerid);
+			OnSweeping[playerid] = 0;
+			SetVehicleToRespawn(GetPlayerVehicleID(playerid));
+			SendClientMessage(playerid, COLOR_LIGHTBLUE, "SIDEJOB : {FFFFFF}You failed to work because you hit too many times.");
+		}
+		return 1;
+	}
+    else if(OnSweeping[playerid] == 8)
+	{
+		GetVehicleHealth(GetPlayerVehicleID(playerid), Health);
+		if(Health > 600)
+		{
+			DisablePlayerCheckpoint(playerid);
+			OnSweeping[playerid] = 9;
+			SetPlayerCheckpoint(playerid,1356.0698,269.4026,19.5230,6);
+		}
+		if(Health < 600)
+		{
+			DisablePlayerCheckpoint(playerid);
+			OnSweeping[playerid] = 0;
+			SetVehicleToRespawn(GetPlayerVehicleID(playerid));
+			SendClientMessage(playerid, COLOR_LIGHTBLUE, "SIDEJOB : {FFFFFF}You failed to work because you hit too many times.");
+		}
+		return 1;
+	}
+    else if(OnSweeping[playerid] == 9)
+	{
+		DisablePlayerCheckpoint(playerid);
+		OnSweeping[playerid] = 0;
+		GiveMoney(playerid, 100);
+		SendClientMessage(playerid, COLOR_BLUE, "SIDEJOB: {FFFFFF}You have Finished your Job and earn {00FF00}$100");
+		SetVehicleToRespawn(GetPlayerVehicleID(playerid));
+		return 1;
+	}
 	if (PlayerData[playerid][pTutorialStage])
 	{
 	    DisablePlayerCheckpoint(playerid);
@@ -18750,6 +18944,21 @@ public OnPlayerStateChange(playerid, newstate, oldstate)
         SetPlayerInterior(playerid, 1);
 		InRaindance[playerid] = GetPlayerVehicleID(playerid);
 	}
+//	new vehicleid = GetPlayerVehicleID(playerid);
+	if(IsSWEEPERCAR(vehicleid))
+	{
+	    new String[512];
+	    if(PlayerData[playerid][pSweeperT] == 0)
+		{
+			ShowPlayerDialog(playerid, DIALOG_SWEEPER, DIALOG_STYLE_MSGBOX, "{FFFFFF}Sweeper Sidejob", "{FFFFFF}Continue for Working","Continue", "Cancel");
+		}
+		else
+		{
+		    format(String, sizeof(String),"ERROR: You must wait for %d for Working again.", PlayerData[playerid][pSweeperT]/60);
+		    SendClientMessage(playerid, COLOR_GREY, String);
+			RemovePlayerFromVehicle(playerid);
+	 	}
+	}
 	return 1;
 }
 
@@ -19001,6 +19210,9 @@ public OnPlayerConnect(playerid)
     Fishing[playerid] = 0;
     HasBait[playerid] = 0;
     HasRod[playerid] = 0;
+    SedangMine[playerid] = 0;
+    SedangMining[playerid] = 0;
+    DapatBatu[playerid] = 0;
     Fish[playerid][1] = 0;
     Fish[playerid][2] = 0;
     Fish[playerid][3] = 0;
@@ -19426,6 +19638,11 @@ public OnGameModeInit()
 		Create3DTextLabel("{ADD8E6}[Hospital Deliver]\n{FFFFFF}/dropinjured to deliver a patient.", COLOR_DEPARTMENT, arrHospitalDeliver[i][0], arrHospitalDeliver[i][1], arrHospitalDeliver[i][2], 15.0, 0);
 	}
 	
+	//Miner Label
+	CreateDynamic3DTextLabel("{00FFFF}[MINER]\n{FFFF00}'/startmine' {FFFFFF}For start working\n{FFFF00}'/stopmine' {FFFFFF}For stop working\n{FFFF00}'/mine' {FFFFFF}For mining", COLOR_WHITE,597.0519,921.3008,-39.8454,10.0);
+	CreateDynamicPickup(1239, 23, 597.0519,921.3008,-39.8454, -1);
+	CreateDynamic3DTextLabel("{00FFFF}[ROCK DEPOT]\n{FFFF00}'/storerock' {FFFFFF}untuk menyetor batu.", COLOR_WHITE,589.4062,882.6472,-44.3614,10.0);
+	CreateDynamicPickup(1239, 23, 589.4062,882.6472,-44.3614, -1);
 	
 	// Textdraws
 	gServerTextdraws[0] = TextDrawCreate(547.000000, 23.000000, "12:00:00");
@@ -19753,7 +19970,13 @@ public OnGameModeInit()
     CreateDynamicObject(18608, 1281.17, 166.09, 1075.63,   0.00, 0.00, 89.58);
     CreateDynamicObject(1491, 1281.46, 160.67, 1071.49,   0.00, 0.00, 0.00);
     CreateDynamicObject(18608, 1282.10, 136.68, 1079.43,   0.00, 0.00, 0.00);
-    
+    //Sweeper Vehicle
+	SWEEPER[0] = AddStaticVehicleEx(574,1331.6461,291.1154,19.2798,244.8274, 1, 1, 1);
+	SetVehicleNumberPlate(SWEEPER[0], "STATIC");
+	SWEEPER[1] = AddStaticVehicleEx(574,1330.5248,288.5705,19.2799,243.9235, 1, 1, 1);
+	SetVehicleNumberPlate(SWEEPER[1], "STATIC");
+	SWEEPER[2] = AddStaticVehicleEx(574,1329.3560,285.8766,19.2799,246.6437, 1, 1, 1);
+	SetVehicleNumberPlate(SWEEPER[2], "STATIC");
     //Post Office Business Type Interior
     CreateDynamicObject(19378,-119.4500000,2020.5200000,900.0000000,0.0000000,90.0000000,0.0000000); //
 	CreateDynamicObject(19460,-105.7300000,2020.4500000,901.8100000,0.0000000,0.0000000,0.0000000); //
@@ -38027,6 +38250,20 @@ CMD:shooter(playerid, params[])
     return 1;
 }
 
+CMD:gotoco(playerid, params[])
+{
+	if(PlayerData[playerid][pAdmin] >= 2)
+	{
+		new Float: pos[3], int;
+		if(sscanf(params, "fffd", pos[0], pos[1], pos[2], int)) return SendSyntaxMessage(playerid, "USAGE: /gotoco [x coordinate] [y coordinate] [z coordinate] [interior]");
+
+		SendClientMessage(playerid, COLOR_GREY, "You have been teleported to the coordinates specified.");
+		SetPlayerPos(playerid, pos[0], pos[1], pos[2]);
+		SetPlayerInterior(playerid, int);
+	}
+	return 1;
+}
+
 CMD:goto(playerid, params[])
 {
 	static
@@ -42273,7 +42510,7 @@ CMD:loadcrate(playerid, params[])
 	return 1;
 }
 
-CMD:mine(playerid, params[])
+/*CMD:mine(playerid, params[])
 {
     if (PlayerData[playerid][pJob] != JOB_MINER)
 	    return SendErrorMessage(playerid, "You don't have the appropriate job.");
@@ -42298,8 +42535,113 @@ CMD:mine(playerid, params[])
 	    SetPlayerAttachedObject(playerid, 4, 18634, 6, 0.156547, 0.039423, 0.026570, 198.109115, 6.364907, 262.997558, 1.000000, 1.000000, 1.000000);
 	}
 	return 1;
-}
+}*/
 
+//Miner by LZ
+CMD:storerock(playerid, params[])
+{
+	if(DapatBatu[playerid] == 0) { SendClientMessageEx(playerid, COLOR_WHITE,"Kamu tidak memiliki batu!"); return 1; }
+	if(!IsPlayerInRangeOfPoint(playerid, 3, 589.3422,882.3864,-44.3770))
+	{
+		SendClientMessageEx(playerid,COLOR_WHITE,"[ERROR] {FFFFFF}Kamu tidak berada di Rock Depot!");
+		return 1;
+	}
+	DapatBatu[playerid] = 0;
+	GiveMoney(playerid, 20);
+	SendClientMessage(playerid, COLOR_BLUE, "[MINER] {FFFFFF}You earn {00FF00}$20 {FFFFFF}From Mining!");
+	RemovePlayerAttachedObject(playerid, 8);
+	SetPlayerSpecialAction(playerid, SPECIAL_ACTION_NONE);
+	return 1;
+}
+CMD:mine(playerid, params[])
+{
+	if(DapatBatu[playerid] == 1) { SendClientMessageEx(playerid, COLOR_YELLOW,"You still have a stone, store first ( /storerock )!"); return 1; }
+    if(PlayerData[playerid][pThirst] <= 10) { SendErrorMessage(playerid, "You are too tired to work."); return 1; }
+    if(SedangMine[playerid] == 1) { SendErrorMessage(playerid, "You are still mining, please wait!"); return 1; }
+	if(SedangMining[playerid] == 0) { SendErrorMessage(playerid, "You haven't started mining yet!"); return 1; }
+	if(IsPlayerInRangeOfPoint(playerid, 20, 597.0519,921.3008,-39.8454))
+	{
+ 		new rand = random(10);
+   		new ftimer = Random(10000, 25000);
+    	if(rand == 0)
+    	{
+  			SetTimerEx("TimeMiningBatu", ftimer, false, "i", playerid);
+		}
+		if(rand == 1)
+  		{
+ 			SetTimerEx("TimeMiningBatu", ftimer, false, "i", playerid);
+		}
+		if(rand == 2)
+  		{
+ 			SetTimerEx("TimeMiningBatu", ftimer, false, "i", playerid);
+		}
+		if(rand == 3)
+  		{
+ 			SetTimerEx("TimeMiningBatu", ftimer, false, "i", playerid);
+		}
+		if(rand == 4)
+  		{
+ 			SetTimerEx("TimeMiningBatu", ftimer, false, "i", playerid);
+		}
+		if(rand == 5)
+   		{
+  			SetTimerEx("TimeMiningBatu", ftimer, false, "i", playerid);
+		}
+		if(rand == 6)
+  		{
+ 			SetTimerEx("TimeMiningBatu", ftimer, false, "i", playerid);
+		}
+		if(rand == 7)
+  		{
+ 			SetTimerEx("TimeMiningBatu", ftimer, false, "i", playerid);
+		}
+		if(rand == 8)
+  		{
+ 			SetTimerEx("TimeMiningBatu", ftimer, false, "i", playerid);
+		}
+		if(rand == 9)
+  		{
+ 			SetTimerEx("TimeMiningBatu", ftimer, false, "i", playerid);
+		}
+		SendClientMessageEx(playerid, COLOR_RED,"[MINER] {FFFFFF}You started mining!");
+		SedangMine[playerid] = 1;
+		TogglePlayerControllable(playerid,0);
+		PlayerData[playerid][pThirst] -= 3;
+		ApplyAnimation(playerid,"BASEBALL","BAT_4",4.1,1,1,1,1,1);
+		return 1;
+	}
+	else
+	{
+ 		SendClientMessage(playerid,COLOR_RED,"[MINER] You're not at Hunter Quary!");
+	}
+	return 1;
+}
+CMD:stopmine(playerid, params[])
+{
+	if(SedangMining[playerid] == 0) { SendClientMessageEx(playerid,COLOR_YELLOW,"EROR : You haven't started Mining yet!"); return 1; }
+	if(IsPlayerInRangeOfPoint(playerid, 3, 597.0519,921.3008,-39.8454))
+	{
+	    SedangMining[playerid] = 0;
+	    SendClientMessage(playerid, COLOR_WHITE, "Kamu berhenti bekerja sebagai Miner!");
+	    RemovePlayerAttachedObject(playerid, 7);
+		RemovePlayerAttachedObject(playerid, 8);
+		SetPlayerSpecialAction(playerid, SPECIAL_ACTION_NONE);
+	}
+	return 1;
+}
+CMD:startmine(playerid, params[])
+{
+//	new String[128];
+	if(PlayerData[playerid][pThirst] <= 10) { SendErrorMessage(playerid, "You are too tired to work."); return 1; }
+	if(SedangMining[playerid] == 1) { SendErrorMessage(playerid, "You have started mining"); return 1; }
+	if(IsPlayerInRangeOfPoint(playerid, 3, 597.0519,921.3008,-39.8454))
+	{
+	    SedangMining[playerid] = 1;
+	    SendClientMessage(playerid, COLOR_YELLOW, "MINER: You have start the job, use /mine to mining!");
+	    SetPlayerAttachedObject(playerid, 7, 18634, 6, 0.156547, 0.039423, 0.026570, 198.109115, 6.364907, 262.997558, 1.000000, 1.000000, 1.000000);
+	}
+	return 1;
+}
 CMD:sellfood(playerid, params[])
 {
 	if (PlayerData[playerid][pJob] != JOB_FOOD_VENDOR)
@@ -50380,7 +50722,14 @@ CMD:billboards(playerid, params[])
 	ViewBillboards(playerid);
 	return 1;
 }
-
+/* MENGEROR
+C:\Users\USER\Downloads\High Mild Roleplay v0.1.2\gamemodes\High-Mild.pwn(1966 -- 1989) : error 001: expected token: ",", but found "-identifier-"
+C:\Users\USER\Downloads\High Mild Roleplay v0.1.2\gamemodes\High-Mild.pwn(1989) : warning 217: loose indentation
+C:\Users\USER\Downloads\High Mild Roleplay v0.1.2\gamemodes\High-Mild.pwn(1989 -- 1990) : warning 215: expression has no effect
+C:\Users\USER\Downloads\High Mild Roleplay v0.1.2\gamemodes\High-Mild.pwn(1990) : error 001: expected token: ";", but found ")"
+C:\Users\USER\Downloads\High Mild Roleplay v0.1.2\gamemodes\High-Mild.pwn(1990) : warning 217: loose indentation
+C:\Users\USER\Downloads\High Mild Roleplay v0.1.2\gamemodes\High-Mild.pwn(1990) : error 029: invalid expression, assumed zero
+C:\Users\USER\Downloads\High Mild Roleplay v0.1.2\gamemodes\High-Mild.pwn(1990) : fatal error 107: too many error messages on one line*/
 CMD:mybillboard(playerid, params[])
 {
 	if(PlayerData[playerid][pOwnsBillboard] == -1)
@@ -50392,17 +50741,79 @@ CMD:mybillboard(playerid, params[])
     return 1;
 }
 
-public OnPlayerAirBreak(playerid)
-{
-    Kick(playerid);
-	new string[256];
-	format(string, sizeof(string), "{ADDBE6}Anticheat: %s has been kicked due to airbreak hack.", ReturnName(playerid));
-	SendClientMessageToAll(COLOR_SERVER, string);
-	return 1;
-}
-
 public OnPlayerCommandPerformed(playerid, cmdtext[], success)
 {
 	if(!success) return SendClientMessage(playerid, COLOR_GREY, "Unknown commands, type /help for show commands list");
 	return 1;
+}
+RGBAToARGB(rgba)
+    return rgba >>> 8 | rgba << 24;
+    
+forward TimeMiningBatu(playerid);
+public TimeMiningBatu(playerid)
+{
+	new rand = random(4);
+	new String[1000];
+	if(rand == 0)
+	{
+	 	format(String, sizeof(String), "[MINER] {FFFFFF}You was successful mining the Rock, store it to the Rock Depot.");
+	  	SendClientMessageEx(playerid, COLOR_YELLOW,String);
+	  	DapatBatu[playerid] = 1;
+		ClearAnimations(playerid);
+		//animation[playerid] = 0;
+		SedangMine[playerid] = 0;
+		TogglePlayerControllable(playerid,1);
+		ApplyAnimation(playerid, "BSKTBALL", "null", 4.0, 0, 1, 1, 0, 0, 1);
+        ApplyAnimation(playerid, "BSKTBALL", "BBALL_pickup", 4.0, 0, 1, 1, 0, 0, 1);
+		//SetPlayerAttachedObject(playerid, 5, 2936, 5, 0.044377, 0.029049, 0.161334, 265.922912, 9.904896, 21.765972, 0.500000, 0.500000, 0.500000);
+		SetPlayerSpecialAction(playerid, SPECIAL_ACTION_CARRY);
+		SetPlayerAttachedObject(playerid, 8, 2936, 5, 0.105, 0.086, 0.22, -80.3, 3.3, 28.7, 0.35, 0.35, 0.35, RGBAToARGB(0xB87333FF));
+		return 1;
+	}
+	else if(rand == 1)
+	{
+	 	format(String, sizeof(String), "[MINER] {FFFFFF}You was successful mining the Rock, store it to the Rock Depot.");
+	  	SendClientMessageEx(playerid, COLOR_YELLOW,String);
+	  	DapatBatu[playerid] = 1;
+		ClearAnimations(playerid);
+//		animation[playerid] = 0;
+		SedangMine[playerid] = 0;
+		TogglePlayerControllable(playerid,1);
+		ApplyAnimation(playerid, "BSKTBALL", "null", 4.0, 0, 1, 1, 0, 0, 1);
+        ApplyAnimation(playerid, "BSKTBALL", "BBALL_pickup", 4.0, 0, 1, 1, 0, 0, 1);
+		SetPlayerSpecialAction(playerid, SPECIAL_ACTION_CARRY);
+		SetPlayerAttachedObject(playerid, 8, 2936, 5, 0.105, 0.086, 0.22, -80.3, 3.3, 28.7, 0.35, 0.35, 0.35, RGBAToARGB(0xB87333FF));
+	  	return 1;
+ 	}
+ 	else if(rand == 2)
+	{
+	 	format(String, sizeof(String), "[MINER] {FFFFFF}You was successful mining the Rock, store it to the Rock Depot.");
+	  	SendClientMessageEx(playerid, COLOR_YELLOW,String);
+	  	DapatBatu[playerid] = 1;
+		ClearAnimations(playerid);
+		//animation[playerid] = 0;
+		SedangMine[playerid] = 0;
+		TogglePlayerControllable(playerid,1);
+		ApplyAnimation(playerid, "BSKTBALL", "null", 4.0, 0, 1, 1, 0, 0, 1);
+        ApplyAnimation(playerid, "BSKTBALL", "BBALL_pickup", 4.0, 0, 1, 1, 0, 0, 1);
+		SetPlayerSpecialAction(playerid, SPECIAL_ACTION_CARRY);
+		SetPlayerAttachedObject(playerid, 8, 2936, 5, 0.105, 0.086, 0.22, -80.3, 3.3, 28.7, 0.35, 0.35, 0.35, RGBAToARGB(0xB87333FF));
+		return 1;
+ 	}
+ 	else if(rand == 3)
+	{
+	 	format(String, sizeof(String), "[MINER] {FFFFFF}You was successful mining the Rock, store it to the Rock Depot.");
+	  	SendClientMessageEx(playerid, COLOR_YELLOW,String);
+	  	DapatBatu[playerid] = 1;
+		ClearAnimations(playerid);
+		//animation[playerid] = 0;
+		SedangMine[playerid] = 0;
+		TogglePlayerControllable(playerid,1);
+		ApplyAnimation(playerid, "BSKTBALL", "null", 4.0, 0, 1, 1, 0, 0, 1);
+        ApplyAnimation(playerid, "BSKTBALL", "BBALL_pickup", 4.0, 0, 1, 1, 0, 0, 1);
+		SetPlayerSpecialAction(playerid, SPECIAL_ACTION_CARRY);
+		SetPlayerAttachedObject(playerid, 8, 2936, 5, 0.105, 0.086, 0.22, -80.3, 3.3, 28.7, 0.35, 0.35, 0.35, RGBAToARGB(0xB87333FF));
+	  	return 1;
+ 	}
+  	return 1;
 }
