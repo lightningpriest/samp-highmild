@@ -28916,35 +28916,34 @@ public OnPlayerText(playerid, text[])
 	        return 0;
 		}
 	}
+	if (PlayerData[playerid][pAdminDuty] == 1)
+	{
+		foreach (new i : Player){
+		SendNearbyMessage(i, 20.0, COLOR_WHITE, "{FF0000}%s: {FFFFFF}(( %s ))", PlayerData[i][pUsername], text);
+		return 0;
+		}
+	}
 	if (PlayerData[playerid][pNewsGuest] != INVALID_PLAYER_ID && GetFactionType(PlayerData[playerid][pNewsGuest]) == FACTION_NEWS && IsPlayerInAnyVehicle(playerid) && IsNewsVehicle(GetPlayerVehicleID(playerid)))
 	{
 	    foreach (new i : Player) if (!PlayerData[i][pDisableBC]) {
 	  		SendClientMessageEx(i, COLOR_LIGHTGREEN, "[NEWS] Guest %s: %s", ReturnName(playerid, 0), text);
 		}
-	   	return 0;
+	return 0;
    	}
 	else
 	{
 		new
 			targetid = PlayerData[playerid][pCallLine];
 
-		//SetPlayerChatBubble(playerid, text, COLOR_WHITE, 10.0, 6000);
+		if (!IsPlayerOnPhone(playerid))
+			SendNearbyMessage(playerid, 20.0, COLOR_WHITE, "%s says: %s", ReturnName(playerid, 0), text);
 
-        if (IsPlayerInAnyVehicle(playerid) && IsWindowedVehicle(GetPlayerVehicleID(playerid)) && !CoreVehicles[GetPlayerVehicleID(playerid)][vehWindowsDown])
-			SendVehicleMessage(GetPlayerVehicleID(playerid), 0xBBFFEEFF, "[Vehicle] %s says: %s", ReturnName(playerid, 0), text);
+		else SendNearbyMessage(playerid, 20.0, COLOR_WHITE, "(Phone) %s says: %s", ReturnName(playerid, 0), text);
 
-		else
-		{
-		    if (!IsPlayerOnPhone(playerid))
-				SendNearbyMessage(playerid, 20.0, COLOR_WHITE, "%s says: %s", ReturnName(playerid, 0), text);
+		if (!IsPlayerInAnyVehicle(playerid) && !PlayerData[playerid][pInjured] && !PlayerData[playerid][pLoopAnim]) {
+			ApplyAnimation(playerid, "GANGS", "prtial_gngtlkA", 4.1, 0, 1, 1, 1, strlen(text) * 100, 1);
 
-			else SendNearbyMessage(playerid, 20.0, COLOR_WHITE, "(Phone) %s says: %s", ReturnName(playerid, 0), text);
-
-			if (!IsPlayerInAnyVehicle(playerid) && !PlayerData[playerid][pInjured] && !PlayerData[playerid][pLoopAnim]) {
-				ApplyAnimation(playerid, "GANGS", "prtial_gngtlkA", 4.1, 0, 1, 1, 1, strlen(text) * 100, 1);
-
-				SetTimerEx("StopChatting", strlen(text) * 100, false, "d", playerid);
-			}
+		    SetTimerEx("StopChatting", strlen(text) * 100, false, "d", playerid);
 		}
 		switch (PlayerData[playerid][pEmergency])
 		{
@@ -36279,6 +36278,13 @@ CMD:l(playerid, params[])
 	}
  	//format(string, sizeof(string), "[low] says: %s", params);
 	//SetPlayerChatBubble(playerid, string, COLOR_WHITE, 5.0, 6000);
+	return 1;
+}
+
+CMD:cw(playerid, params[])
+{
+	if (IsPlayerInAnyVehicle(playerid) && IsWindowedVehicle(GetPlayerVehicleID(playerid)) && !CoreVehicles[GetPlayerVehicleID(playerid)][vehWindowsDown])
+	SendVehicleMessage(GetPlayerVehicleID(playerid), 0xBBFFEEFF, "[Vehicle Whisper] %s says: %s", ReturnName(playerid, 0), params);
 	return 1;
 }
 
@@ -50566,7 +50572,7 @@ CMD:mybillboard(playerid, params[])
 
 public OnPlayerCommandPerformed(playerid, cmdtext[], success)
 {
-	if(!success) return SendClientMessage(playerid, COLOR_GREY, "Unknown commands, type /help for show commands list");
+	if(!success) return SendClientMessage(playerid, COLOR_GREY, "ERROR: Unknown commands, type /help for show commands list");
 	return 1;
 }
 RGBAToARGB(rgba)
