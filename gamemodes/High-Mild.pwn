@@ -74,7 +74,7 @@ Gamemode Info:
 
 #define SERVER_NAME 	 "[0.3-DL] High Mild Roleplay | Development Test"
 #define SERVER_URL 		 "www.highmildrp.org"
-#define SERVER_REVISION  "HMR 0.1.2 - The Beginning!"
+#define SERVER_REVISION  "HMR v0.1.2 - The Beginning!"
 #define SERVER_CITY 	 (3)
 
 #define COLOR_CLIENT      (0xAAC4E5FF)
