@@ -72,7 +72,7 @@ Gamemode Info:
 #define SQL_DATABASE "highmild"
 #define SQL_PASSWORD ""
 
-#define SERVER_NAME 	 "[0.3-DL] High Mild Roleplay | Beta Test"
+#define SERVER_NAME 	 "[0.3-DL] High Mild Roleplay | Development Test"
 #define SERVER_URL 		 "www.highmildrp.org"
 #define SERVER_REVISION  "HMR 0.1.2 - The Beginning!"
 #define SERVER_CITY 	 (3)
@@ -36142,7 +36142,7 @@ CMD:b(playerid, params[])
 	{
 	    if(PlayerData[playerid][pAdminDuty] == 1)
 	    {
-	        SendNearbyMessage(playerid, 20.0, COLOR_WHITE, "{33EE33}%s{FFFFFF}: (( %.64s", ReturnName(playerid, 0), params);
+	        SendNearbyMessage(playerid, 20.0, COLOR_WHITE, "{33EE33}%s: {FFFFFF}(( %.64s", ReturnName(playerid, 0), params);
 	    	SendNearbyMessage(playerid, 20.0, COLOR_WHITE, "...%s ))", params[64]);
 	        return 1;
 		}
@@ -36153,21 +36153,13 @@ CMD:b(playerid, params[])
 	{
 	    if(PlayerData[playerid][pAdminDuty] == 1)
 	    {
-	        SendNearbyMessage(playerid, 20.0, COLOR_WHITE, "{FF0000}%s{FFFFFF}: (( %s ))", ReturnName(playerid, 0), params);
+	        SendNearbyMessage(playerid, 20.0, COLOR_WHITE, "{FF0000}%s: {FFFFFF}(( %s ))", ReturnName(playerid, 0), params);
 			return 1;
 		}
 	    SendNearbyMessage(playerid, 20.0, COLOR_WHITE, "%s: (( %s ))", ReturnName(playerid, 0), params);
 	}
 	//format(string, sizeof(string), "(( %s ))", params);
 	//SetPlayerChatBubble(playerid, string, COLOR_WHITE, 10.0, 6000);
-	return 1;
-}
-
-CMD:oocadmins(playerid, params[])
-{
-    if (PlayerData[playerid][pAdmin] < 0)
-	    return SendErrorMessage(playerid, "Kamu tidak diizinkan menggunakan perintah ini!");
-	SendClientMessageEx(playerid, COLOR_WHITE, "(( {FF0000}%s %s: {FFFFFF}%s ))", AdminRankName(playerid), PlayerData[playerid][pUsername], params);
 	return 1;
 }
 
@@ -36315,6 +36307,12 @@ CMD:o(playerid, params[])
         foreach (new i : Player) if (!PlayerData[i][pDisableOOC] && PlayerData[i][pCreated]) {
 		    SendClientMessageEx(i, COLOR_WHITE, "(( {ADD8E6}Player %s: {FFFFFF}%.64s", ReturnName(playerid, 0), params);
 		    SendClientMessageEx(i, COLOR_WHITE, "...%s ))", params[64]);
+		}
+	}
+	else if(PlayerData[playerid][pAdminDuty] == 1)
+	{
+		foreach (new i : Player){
+		SendClientMessageEx(i, COLOR_WHITE, "(( {FF0000}%s %s: {FFFFFF}%s ))", AdminRankName(i), PlayerData[i][pUsername], params);
 		}
 	}
 	else
