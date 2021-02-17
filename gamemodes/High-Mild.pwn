@@ -28720,15 +28720,16 @@ public OnPlayerSpawn(playerid)
 	// Login Message
 	if (!PlayerData[playerid][pDisableLogin]){
 	new string[244];
-	format(string, sizeof(string), "{FFFFFF}* {FF0000}%s {FFFF00}is now login to the server. (%s, %s)", ReturnName(playerid,0), city, country);
+	format(string, sizeof(string), "{FFFFFF}* {FF0000}%s {FFFFFF}is now login to the server. (%s, %s)", ReturnName(playerid,0), city, country);
 	SendClientMessageToAll(COLOR_WHITE, string);
 	}
 	// Selamat Datang Message
 	new string[245];
 	foreach (new i : Player)
 	{
-	format(string, sizeof(string), "{ADDBE}SERVER: {FFFFFF}Selamat datang, {FFFF00}%s.", ReturnName(i, 0));
+	format(string, sizeof(string), "{ADDBE6}SERVER: {FFFFFF}Selamat datang, {FFFF00}%s.", ReturnName(i, 0));
 	SendClientMessageEx(playerid, COLOR_WHITE, string);
+	return 0;
 	}
 	// MOTD Player
 	SendClientMessage(playerid, COLOR_WHITE, "{00F8FC}MOTD: {FFFF00}/changelog {FFFFFF}untuk melihat update server.");
@@ -28920,7 +28921,7 @@ public OnPlayerText(playerid, text[])
 	{
 		foreach (new i : Player){
 		SendNearbyMessage(i, 20.0, COLOR_WHITE, "{FF0000}%s: {FFFFFF}(( %s ))", PlayerData[i][pUsername], text);
-		return 0;
+	    return 0;
 		}
 	}
 	if (PlayerData[playerid][pNewsGuest] != INVALID_PLAYER_ID && GetFactionType(PlayerData[playerid][pNewsGuest]) == FACTION_NEWS && IsPlayerInAnyVehicle(playerid) && IsNewsVehicle(GetPlayerVehicleID(playerid)))
@@ -28928,7 +28929,7 @@ public OnPlayerText(playerid, text[])
 	    foreach (new i : Player) if (!PlayerData[i][pDisableBC]) {
 	  		SendClientMessageEx(i, COLOR_LIGHTGREEN, "[NEWS] Guest %s: %s", ReturnName(playerid, 0), text);
 		}
-	return 0;
+	    return 0;
    	}
 	else
 	{
