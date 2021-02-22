@@ -5,7 +5,7 @@ Changelog can be see at top server comments.
    
 Current version: Project Two Build 1.0.0 
   
-### Requirements  
+## Requirements  
 [MySQL R39-4](https://github.com/pBlueG/SA-MP-MySQL/releases/tag/R39-4)  
 [YSI 4.0](https://github.com/pawn-lang/YSI-Includes/releases/tag/v4.0.0)  
 [easyDialog](https://github.com/Awsomedude/easyDialog)  
@@ -21,7 +21,7 @@ Current version: Project Two Build 1.0.0
 [customplayernametags](https://github.com/alextwothousand/customplayernametags)  
 [eSelection](https://github.com/TommyB123/eSelection)  
   
-### Credits  
+## Credits  
 [Aat Balthazar](https://www.youtube.com/channel/UCieN0vw4YGqMSk8q-WkJhVg) for maintained server textdraws.  
 [Arif Rahman Hudaya](https://www.youtube.com/channel/UCsRRY0zu_yfARLAiSiq3AHw) for server update since i inactive developing.  
 [Mohammad Rafli](https://github.com/zzckrian) for maintained server bot.  
