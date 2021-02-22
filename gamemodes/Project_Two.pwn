@@ -65,7 +65,7 @@ Gamemode Info:
 #define SQL_DATABASE "projectwo"
 #define SQL_PASSWORD ""
 
-#define SERVER_NAME 	 "[0.3-DL] Project Two"
+#define SERVER_NAME 	 "[0.3-DL] Project Two Reloaded"
 #define SERVER_URL 		 "www.prrssr.tk"
 #define SERVER_REVISION  "PT2 - v.1.0"
 #define SERVER_CITY 	 (3)
@@ -1924,10 +1924,10 @@ SQL_Connect() {
 	g_iHandle = mysql_connect(SQL_HOSTNAME, SQL_USERNAME, SQL_DATABASE, SQL_PASSWORD);
 
 	if (mysql_errno(g_iHandle) != 0) {
-	    printf("[SQL] Connection to \"%s\" failed! Please check the connection settings...\a", SQL_HOSTNAME);
+	    printf("[Database Connection] Failed.", SQL_HOSTNAME);
 	}
 	else {
-		printf("[SQL] Connection to \"%s\" passed!", SQL_HOSTNAME);
+		printf("[Database Connection] Passed.");
 	}
 }
 
@@ -15241,7 +15241,7 @@ public OnQueryFinished(extraid, threadid)
 			    cache_get_row(0, 0, loginDate, g_iHandle);
 
 				format(PlayerData[extraid][pLoginDate], 36, loginDate);
-                Dialog_Show(extraid, LoginScreen, DIALOG_STYLE_PASSWORD, "Welcome to Project Two - Login", "{FFFFFF}Username: {FFFF00}%s\nEnter your password:", "Login", "Cancel", ReturnName(extraid));
+                Dialog_Show(extraid, LoginScreen, DIALOG_STYLE_PASSWORD, "Welcome to Project Two - Login", "{FFFFFF}Username: {FFFF00}%s\n{FFFFFF}Enter your password:", "Login", "Cancel", ReturnName(extraid));
 			}
 			else
 			{
@@ -15263,7 +15263,7 @@ public OnQueryFinished(extraid, threadid)
 				}
 				else
 				{
-    	        	Dialog_Show(extraid, LoginScreen, DIALOG_STYLE_PASSWORD, "{FFFFFF}Username: {FFFF00}%s\nEnter your password:", "Login", "Cancel", ReturnName(extraid));
+    	        	Dialog_Show(extraid, LoginScreen, DIALOG_STYLE_PASSWORD, "{FFFFFF}Username: {FFFF00}%s\n{FFFFFF}Enter your password:", "Login", "Cancel", ReturnName(extraid));
     	        	SendClientMessageEx(extraid, COLOR_LIGHTRED, "WARNING: Wrong password! (%d/3 attempts).", PlayerData[extraid][pLoginAttempts]);
 				}
 			}
@@ -15288,7 +15288,7 @@ public OnQueryFinished(extraid, threadid)
 			for (new i = 0; i < rows; i ++) {
 			    cache_get_field_content(i, "Character", PlayerCharacters[extraid][i], g_iHandle, MAX_PLAYER_NAME);
 		    }
-		    SendServerMessage(extraid, "{FFFFFF}Berhasil login, pilih karakter yang akan dimainkan.");
+		    SendServerMessage(extraid, "{FFFFFF}Successfully logged in.");
             ShowCharacterMenu(extraid);
 		}
 		case THREAD_LOAD_CHARACTER:
@@ -15303,13 +15303,13 @@ public OnQueryFinished(extraid, threadid)
 			    if (PlayerData[i][pCharacter] == PlayerData[extraid][pCharacter] && !strcmp(ReturnName(i), PlayerCharacters[extraid][PlayerData[extraid][pCharacter] - 1]) && i != extraid)
        			{
        			    ShowCharacterMenu(extraid);
-				   	SendErrorMessage(extraid, "Karakter ini sedang login.");
+				   	SendErrorMessage(extraid, "This character is currently logged.");
 				}
 			}
 			switch (SetPlayerName(extraid, PlayerCharacters[extraid][PlayerData[extraid][pCharacter] - 1]))
 			{
 			    case -1: {
-					SendClientMessageEx(extraid, COLOR_LIGHTRED, "Nama Karakter yang anda masukkan telah terdaftar diserver.");
+					SendClientMessageEx(extraid, COLOR_LIGHTRED, "The character name you entered has been registered in the server.");
 				}
 				default:
 				{
@@ -16980,18 +16980,18 @@ public PlayerCheck()
 		    if (!IsPlayerInRangeOfPoint(i, 100.0, g_arrDrivingCheckpoints[PlayerData[i][pTestStage]][0], g_arrDrivingCheckpoints[PlayerData[i][pTestStage]][1], g_arrDrivingCheckpoints[PlayerData[i][pTestStage]][2]))
 			{
 		        CancelDrivingTest(i);
-				SendClientMessage(i, COLOR_LIGHTRED, "[WARNING]:{FFFFFF} You have failed the test due to leaving the test area.");
+				SendClientMessage(i, COLOR_LIGHTRED, "WARNING:{FFFFFF} You have failed the test due to leaving the test area.");
     		}
 			else if (GetPlayerSpeed(i) >= 55.0)
    			{
 				if (++PlayerData[i][pTestWarns] < 3)
 				{
-    				SendClientMessageEx(i, COLOR_LIGHTRED, "[WARNING]:{FFFFFF} You are going too fast, slow down! (%d/3)", PlayerData[i][pTestWarns]);
+    				SendClientMessageEx(i, COLOR_LIGHTRED, "WARNING:{FFFFFF} You are going too fast, slow down! (%d/3)", PlayerData[i][pTestWarns]);
         		}
 	       		else
 				{
     				CancelDrivingTest(i);
-        			SendClientMessage(i, COLOR_LIGHTRED, "[WARNING]:{FFFFFF} You have failed the test due to excessive speeding!");
+        			SendClientMessage(i, COLOR_LIGHTRED, "WARNING:{FFFFFF} You have failed the test due to excessive speeding!");
 			    }
 			}
 		}
@@ -17155,7 +17155,7 @@ public FuelUpdate()
 
 			if (CoreVehicles[i][vehFuel] >= 1 && CoreVehicles[i][vehFuel] <= 5)
 			{
-			    SendClientMessage(GetVehicleDriver(i), COLOR_LIGHTRED, "[WARNING]:{FFFFFF} This vehicle is low on fuel. You must visit a fuel station!");
+			    SendClientMessage(GetVehicleDriver(i), COLOR_LIGHTRED, "WARNING:{FFFFFF} This vehicle is low on fuel. You must visit a fuel station!");
 			}
 		}
 		if (CoreVehicles[i][vehFuel] <= 0)
@@ -17567,7 +17567,7 @@ public OnPlayerTakeDamage(playerid, issuerid, Float:amount, weaponid, bodypart)
     }
 	if (PlayerData[playerid][pFirstAid])
 	{
-	    SendClientMessage(playerid, COLOR_LIGHTRED, "[WARNING]:{FFFFFF} Your first aid kit is no longer in effect as you took damage.");
+	    SendClientMessage(playerid, COLOR_LIGHTRED, "WARNING:{FFFFFF} Your first aid kit is no longer in effect as you took damage.");
 
         PlayerData[playerid][pFirstAid] = 0;
 		KillTimer(PlayerData[playerid][pAidTimer]);
@@ -19491,19 +19491,19 @@ public OnPlayerStateChange(playerid, newstate, oldstate)
 			}
 			if (IsDoorVehicle(vehicleid) && !Inventory_HasItem(playerid, "Car License") && !PlayerData[playerid][pDrivingTest])
 			{
-   				SendClientMessage(playerid, COLOR_LIGHTRED, "[WARNING]:{FFFFFF} You are operating a vehicle without the valid license. You might get in trouble.");
+   				SendClientMessage(playerid, COLOR_LIGHTRED, "WARNING:{FFFFFF} You are operating a vehicle without the valid license. You might get in trouble.");
 			}
 			if (IsAMotorbike(vehicleid) && !Inventory_HasItem(playerid, "Motorbike License") && !PlayerData[playerid][pDrivingTest])
 			{
-   				SendClientMessage(playerid, COLOR_LIGHTRED, "[WARNING]:{FFFFFF} You are operating a motorbike without a valid Motorbike license. You might get in trouble.");
+   				SendClientMessage(playerid, COLOR_LIGHTRED, "WARNING:{FFFFFF} You are operating a motorbike without a valid Motorbike license. You might get in trouble.");
 			}
 			if (IsAPlane(vehicleid) && !Inventory_HasItem(playerid, "Airplane License") && !PlayerData[playerid][pDrivingTest])
 			{
-   				SendClientMessage(playerid, COLOR_LIGHTRED, "[WARNING]:{FFFFFF} You are operating an airplane without a valid Plane license. You might get in trouble.");
+   				SendClientMessage(playerid, COLOR_LIGHTRED, "WARNING:{FFFFFF} You are operating an airplane without a valid Plane license. You might get in trouble.");
 			}
 			if (IsAHelicopter(vehicleid) && !Inventory_HasItem(playerid, "Helicopter License") && !PlayerData[playerid][pDrivingTest])
 			{
-   				SendClientMessage(playerid, COLOR_LIGHTRED, "[WARNING]:{FFFFFF} You are operating a helicopter without a valid Helicopter license. You might get in trouble.");
+   				SendClientMessage(playerid, COLOR_LIGHTRED, "WARNING:{FFFFFF} You are operating a helicopter without a valid Helicopter license. You might get in trouble.");
 			}
 		}
 	    if (IsSpeedoVehicle(vehicleid) && !PlayerData[playerid][pDisableSpeedo]) for (new i = 34; i < 39; i ++) {
@@ -30164,7 +30164,7 @@ public OnPlayerSpawn(playerid)
 		    SetPlayerPos(playerid, PlayerData[playerid][pPos][0], PlayerData[playerid][pPos][1], PlayerData[playerid][pPos][2]);
 
 			TextDrawShowForPlayer(playerid, gServerTextdraws[2]);
-			SendClientMessage(playerid, COLOR_LIGHTRED, "[WARNING]:{FFFFFF} You are injured and require medical attention (/call 911).");
+			SendClientMessage(playerid, COLOR_LIGHTRED, "WARNING:{FFFFFF} You are injured and require medical attention (/call 911).");
 
 			ApplyAnimation(playerid, "CRACK", "null", 4.0, 0, 0, 0, 1, 0, 1);
 			ApplyAnimation(playerid, "CRACK", "crckdeth4", 4.0, 0, 0, 0, 1, 0, 1);
@@ -37214,7 +37214,7 @@ Dialog:LoginScreen(playerid, response, listitem, inputtext[])
 	    return Kick(playerid);
 
 	else if (isnull(inputtext))
-	    return Dialog_Show(playerid, LoginScreen, DIALOG_STYLE_PASSWORD, "Welcome to Project Two - Login", "{FFFFFF}Username: {FFFF00}%s\nEnter your password:", "Login", "Cancel", PlayerData[playerid][pUsername]);
+	    return Dialog_Show(playerid, LoginScreen, DIALOG_STYLE_PASSWORD, "Welcome to Project Two - Login", "{FFFFFF}Username: {FFFF00}%s\n{FFFFFF}Enter your password:", "Login", "Cancel", PlayerData[playerid][pUsername]);
 
 	else
 	{
@@ -38502,7 +38502,7 @@ CMD:report(playerid, params[])
 	if (isnull(params))
 	{
 	    SendSyntaxMessage(playerid, "/report [reason]");
-	    SendClientMessage(playerid, COLOR_LIGHTRED, "[WARNING]:{FFFFFF} Please only use this command for valid purposes only.");
+	    SendClientMessage(playerid, COLOR_LIGHTRED, "WARNING:{FFFFFF} Please only use this command for valid purposes only.");
 	    return 1;
 	}
 	if (Report_GetCount(playerid) > 5)
@@ -41062,7 +41062,7 @@ CMD:abandon(playerid, params[])
 	    if (isnull(params) || (!isnull(params) && strcmp(params, "confirm", true) != 0))
 	    {
 	        SendSyntaxMessage(playerid, "/abandon [confirm]");
-	        SendClientMessage(playerid, COLOR_LIGHTRED, "[WARNING]:{FFFFFF} You are about to abandon your house with no refund.");
+	        SendClientMessage(playerid, COLOR_LIGHTRED, "WARNING:{FFFFFF} You are about to abandon your house with no refund.");
 		}
 		else if (!strcmp(params, "confirm", true))
 		{
@@ -41080,7 +41080,7 @@ CMD:abandon(playerid, params[])
 	    if (isnull(params) || (!isnull(params) && strcmp(params, "confirm", true) != 0))
 	    {
 	        SendSyntaxMessage(playerid, "/abandon [confirm]");
-	        SendClientMessage(playerid, COLOR_LIGHTRED, "[WARNING]:{FFFFFF} You are about to abandon your business with no refund.");
+	        SendClientMessage(playerid, COLOR_LIGHTRED, "WARNING:{FFFFFF} You are about to abandon your business with no refund.");
 		}
 		else if (!strcmp(params, "confirm", true))
 		{
@@ -41098,7 +41098,7 @@ CMD:abandon(playerid, params[])
 	    if (isnull(params) || (!isnull(params) && strcmp(params, "confirm", true) != 0))
 	    {
 	        SendSyntaxMessage(playerid, "/abandon [confirm]");
-	        SendClientMessage(playerid, COLOR_LIGHTRED, "[WARNING]:{FFFFFF} You are about to abandon your vehicle with no refund.");
+	        SendClientMessage(playerid, COLOR_LIGHTRED, "WARNING:{FFFFFF} You are about to abandon your vehicle with no refund.");
 		}
 		else if (CarData[id][carImpounded] != -1)
     		return SendErrorMessage(playerid, "This vehicle is impounded and you can't use it.");
