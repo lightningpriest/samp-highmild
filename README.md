@@ -1,7 +1,11 @@
-## Information     
+## Information   
+In this gamemode you will roleplaying as county civillian, based at Red County.  
+This gamemode is still on work in progress, so if you want to get more updates please donate xD.  
+Changelog can be see at top server comments.  
+   
 Current version: Project Two Build 1.0.0 
   
-### Requirements (PLEASE INSTALL ALL)
+### Requirements  
 [MySQL R39-4](https://github.com/pBlueG/SA-MP-MySQL/releases/tag/R39-4)  
 [YSI 4.0](https://github.com/pawn-lang/YSI-Includes/releases/tag/v4.0.0)  
 [easyDialog](https://github.com/Awsomedude/easyDialog)  
