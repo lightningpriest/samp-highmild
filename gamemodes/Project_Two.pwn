@@ -17,6 +17,7 @@ Gamemode Info:
 			* Risky (South Central Server Owner)
 			* benjaminjones (SC-RP 1.4 Developer)
 			* Arif RH (Past Developer)
+			* Aat Balthazar (Textdraw Updater)
 
 			Total Warning / Problem:
 			0 Warning - 0 Problem(s).
@@ -1915,8 +1916,8 @@ native IsValidVehicle(vehicleid);
 native WP_Hash(buffer[], len, const str[]);
 
 main() {
-	print("[Server Status] High Mild v0.1.2 successfully loaded.");
-	print("[Server Credits] >> prrssr - Emmet - Risky - benjaminjones");
+print(" ------ Project Two Build 1.0.0 ------");
+print(" Please Read the Credits and Respect the License");
 }
 
 SQL_Connect() {
@@ -14277,9 +14278,9 @@ CreateTextDraws(playerid) {
 	PlayerTextDrawSetProportional(playerid, PlayerData[playerid][pTextdraws][82], 1);
 	PlayerTextDrawSetSelectable(playerid, PlayerData[playerid][pTextdraws][82], 0);
 
-	PlayerData[playerid][pTextdraws][83] = CreatePlayerTextDraw(playerid, 43.000000, 311.000000, "Mulholland");
+	PlayerData[playerid][pTextdraws][83] = CreatePlayerTextDraw(playerid, 286.000000, 431.000000, "Montgomery");
 	PlayerTextDrawFont(playerid, PlayerData[playerid][pTextdraws][83], 1);
-	PlayerTextDrawLetterSize(playerid, PlayerData[playerid][pTextdraws][83], 0.275000, 1.350000);
+	PlayerTextDrawLetterSize(playerid, PlayerData[playerid][pTextdraws][83], 0.308333, 1.500000);
 	PlayerTextDrawTextSize(playerid, PlayerData[playerid][pTextdraws][83], 400.000000, 17.000000);
 	PlayerTextDrawSetOutline(playerid, PlayerData[playerid][pTextdraws][83], 1);
 	PlayerTextDrawSetShadow(playerid, PlayerData[playerid][pTextdraws][83], 0);
@@ -15240,11 +15241,11 @@ public OnQueryFinished(extraid, threadid)
 			    cache_get_row(0, 0, loginDate, g_iHandle);
 
 				format(PlayerData[extraid][pLoginDate], 36, loginDate);
-                Dialog_Show(extraid, LoginScreen, DIALOG_STYLE_PASSWORD, "LOGIN", "{FFFFFF}Selamat datang di server {FFFF00}High Mild Roleplay{FFFFFF}\nAkunmu terdaftar sebagai {8FCF46}%s.{FFFFFF}\nMasukkan password di kolom bawah ini:", "Login", "Quit", ReturnName(extraid));
+                Dialog_Show(extraid, LoginScreen, DIALOG_STYLE_PASSWORD, "Welcome to Project Two - Login", "{FFFFFF}Username: {FFFF00}%s\nEnter your password:", "Login", "Cancel", ReturnName(extraid));
 			}
 			else
 			{
-			    Dialog_Show(extraid, RegisterScreen, DIALOG_STYLE_PASSWORD, "REGISTER", "{FFFFFF}Selamat datang di server {FFFF00}High Mild Roleplay{FFFFFF}\n{8FCF46}%s{FFFFFF} belum terdaftar di database\nMasukkan password di kolom bawah ini untuk registrasi:", "Register", "Quit", ReturnName(extraid));
+			    Dialog_Show(extraid, RegisterScreen, DIALOG_STYLE_PASSWORD, "Welcome to Project Two - Register", "{FFFFFF}Username: {FFFF00}%s {FFFFFF}is not registered.\nEnter your password to register:", "Register", "Cancel", ReturnName(extraid));
 			}
     	}
     	case THREAD_LOGIN:
@@ -15262,8 +15263,8 @@ public OnQueryFinished(extraid, threadid)
 				}
 				else
 				{
-    	        	Dialog_Show(extraid, LoginScreen, DIALOG_STYLE_PASSWORD, "LOGIN", "{FFFFFF}Selamat datang di server {FFFF00}High Mild Roleplay{FFFFFF}\nAkunmu terdaftar sebagai {8FCF46}%s.{FFFFFF}\nMasukkan password di kolom bawah ini:", "Login", "Quit", ReturnName(extraid));
-    	        	SendClientMessageEx(extraid, COLOR_LIGHTRED, "Anda memasukkan password yang salah! (%d/3 kesempatan).", PlayerData[extraid][pLoginAttempts]);
+    	        	Dialog_Show(extraid, LoginScreen, DIALOG_STYLE_PASSWORD, "{FFFFFF}Username: {FFFF00}%s\nEnter your password:", "Login", "Cancel", ReturnName(extraid));
+    	        	SendClientMessageEx(extraid, COLOR_LIGHTRED, "WARNING: Wrong password! (%d/3 attempts).", PlayerData[extraid][pLoginAttempts]);
 				}
 			}
 			else
@@ -18596,7 +18597,7 @@ public OnPlayerEnterRaceCheckpoint(playerid)
 			DisablePlayerRaceCheckpoint(playerid);
 			OnBus[playerid] = 0;
 			SetVehicleToRespawn(GetPlayerVehicleID(playerid));
-			SendClientMessage(playerid, COLOR_LIGHTBLUE, "SIDEJOB : {FFFFFF}Kamu gagal bekerja {FFFF00}Bus Driver {FFFFFF}Karena terlalu sering menabrak!");
+			SendClientMessage(playerid, COLOR_WHITE, "{ADDBE6}SIDEJOB: {FFFFFF}Kamu gagal bekerja {FFFF00}Bus Driver {FFFFFF}karena terlalu sering menabrak!");
 		}
 		return 1;
 	}
@@ -18614,7 +18615,7 @@ public OnPlayerEnterRaceCheckpoint(playerid)
 			DisablePlayerRaceCheckpoint(playerid);
 			OnBus[playerid] = 0;
 			SetVehicleToRespawn(GetPlayerVehicleID(playerid));
-			SendClientMessage(playerid, COLOR_LIGHTBLUE, "SIDEJOB : {FFFFFF}Kamu gagal bekerja {FFFF00}Bus Driver {FFFFFF}Karena terlalu sering menabrak!");
+			SendClientMessage(playerid, COLOR_WHITE, "{ADDBE6}SIDEJOB: {FFFFFF}Kamu gagal bekerja {FFFF00}Bus Driver {FFFFFF}karena terlalu sering menabrak!");
 		}
 		return 1;
 	}
@@ -18632,7 +18633,7 @@ public OnPlayerEnterRaceCheckpoint(playerid)
 			DisablePlayerRaceCheckpoint(playerid);
 			OnBus[playerid] = 0;
 			SetVehicleToRespawn(GetPlayerVehicleID(playerid));
-			SendClientMessage(playerid, COLOR_LIGHTBLUE, "SIDEJOB : {FFFFFF}Kamu gagal bekerja {FFFF00}Bus Driver {FFFFFF}Karena terlalu sering menabrak!");
+			SendClientMessage(playerid, COLOR_WHITE, "{ADDBE6}SIDEJOB: {FFFFFF}Kamu gagal bekerja {FFFF00}Bus Driver {FFFFFF}Karena terlalu sering menabrak!");
 		}
 		return 1;
 	}
@@ -18650,7 +18651,7 @@ public OnPlayerEnterRaceCheckpoint(playerid)
 			DisablePlayerRaceCheckpoint(playerid);
 			OnBus[playerid] = 0;
 			SetVehicleToRespawn(GetPlayerVehicleID(playerid));
-			SendClientMessage(playerid, COLOR_LIGHTBLUE, "SIDEJOB : {FFFFFF}Kamu gagal bekerja {FFFF00}Bus Driver {FFFFFF}Karena terlalu sering menabrak!");
+			SendClientMessage(playerid, COLOR_WHITE, "{ADDBE6}SIDEJOB: {FFFFFF}Kamu gagal bekerja {FFFF00}Bus Driver {FFFFFF}Karena terlalu sering menabrak!");
 		}
 		return 1;
 	}
@@ -18668,7 +18669,7 @@ public OnPlayerEnterRaceCheckpoint(playerid)
 			DisablePlayerRaceCheckpoint(playerid);
 			OnBus[playerid] = 0;
 			SetVehicleToRespawn(GetPlayerVehicleID(playerid));
-			SendClientMessage(playerid, COLOR_LIGHTBLUE, "SIDEJOB : {FFFFFF}Kamu gagal bekerja {FFFF00}Bus Driver {FFFFFF}Karena terlalu sering menabrak!");
+			SendClientMessage(playerid, COLOR_WHITE, "{ADDBE6}SIDEJOB: {FFFFFF}Kamu gagal bekerja {FFFF00}Bus Driver {FFFFFF}karena terlalu sering menabrak!");
 		}
 		return 1;
 	}
@@ -18686,7 +18687,7 @@ public OnPlayerEnterRaceCheckpoint(playerid)
 			DisablePlayerRaceCheckpoint(playerid);
 			OnBus[playerid] = 0;
 			SetVehicleToRespawn(GetPlayerVehicleID(playerid));
-			SendClientMessage(playerid, COLOR_LIGHTBLUE, "SIDEJOB : {FFFFFF}Kamu gagal bekerja {FFFF00}Bus Driver {FFFFFF}Karena terlalu sering menabrak!");
+			SendClientMessage(playerid, COLOR_WHITE, "{ADDBE6}SIDEJOB: {FFFFFF}Kamu gagal bekerja {FFFF00}Bus Driver {FFFFFF}karena terlalu sering menabrak!");
 		}
 		return 1;
 	}
@@ -18704,7 +18705,7 @@ public OnPlayerEnterRaceCheckpoint(playerid)
 			DisablePlayerRaceCheckpoint(playerid);
 			OnBus[playerid] = 0;
 			SetVehicleToRespawn(GetPlayerVehicleID(playerid));
-			SendClientMessage(playerid, COLOR_LIGHTBLUE, "SIDEJOB : {FFFFFF}Kamu gagal bekerja {FFFF00}Bus Driver {FFFFFF}Karena terlalu sering menabrak!");
+			SendClientMessage(playerid, COLOR_WHITE, "{ADDBE6}SIDEJOB: {FFFFFF}Kamu gagal bekerja {FFFF00}Bus Driver {FFFFFF}karena terlalu sering menabrak!");
 		}
 		return 1;
 	}
@@ -18722,7 +18723,7 @@ public OnPlayerEnterRaceCheckpoint(playerid)
 			DisablePlayerRaceCheckpoint(playerid);
 			OnBus[playerid] = 0;
 			SetVehicleToRespawn(GetPlayerVehicleID(playerid));
-			SendClientMessage(playerid, COLOR_LIGHTBLUE, "SIDEJOB : {FFFFFF}Kamu gagal bekerja {FFFF00}Bus Driver {FFFFFF}Karena terlalu sering menabrak!");
+			SendClientMessage(playerid, COLOR_WHITE, "{ADDBE6}SIDEJOB: {FFFFFF}Kamu gagal bekerja {FFFF00}Bus Driver {FFFFFF}karena terlalu sering menabrak!");
 		}
 		return 1;
 	}
@@ -18740,7 +18741,7 @@ public OnPlayerEnterRaceCheckpoint(playerid)
 			DisablePlayerRaceCheckpoint(playerid);
 			OnBus[playerid] = 0;
 			SetVehicleToRespawn(GetPlayerVehicleID(playerid));
-			SendClientMessage(playerid, COLOR_LIGHTBLUE, "SIDEJOB : {FFFFFF}Kamu gagal bekerja {FFFF00}Bus Driver {FFFFFF}Karena terlalu sering menabrak!");
+			SendClientMessage(playerid, COLOR_WHITE, "{ADDBE6}SIDEJOB: {FFFFFF}Kamu gagal bekerja {FFFF00}Bus Driver {FFFFFF}karena terlalu sering menabrak!");
 		}
 		return 1;
 	}
@@ -18758,7 +18759,7 @@ public OnPlayerEnterRaceCheckpoint(playerid)
 			DisablePlayerRaceCheckpoint(playerid);
 			OnBus[playerid] = 0;
 			SetVehicleToRespawn(GetPlayerVehicleID(playerid));
-			SendClientMessage(playerid, COLOR_LIGHTBLUE, "SIDEJOB : {FFFFFF}Kamu gagal bekerja {FFFF00}Bus Driver {FFFFFF}Karena terlalu sering menabrak!");
+			SendClientMessage(playerid, COLOR_WHITE, "{ADDBE6}SIDEJOB: {FFFFFF}Kamu gagal bekerja {FFFF00}Bus Driver {FFFFFF}karena terlalu sering menabrak!");
 		}
 		return 1;
 	}
@@ -18776,7 +18777,7 @@ public OnPlayerEnterRaceCheckpoint(playerid)
 			DisablePlayerRaceCheckpoint(playerid);
 			OnBus[playerid] = 0;
 			SetVehicleToRespawn(GetPlayerVehicleID(playerid));
-			SendClientMessage(playerid, COLOR_LIGHTBLUE, "SIDEJOB : {FFFFFF}Kamu gagal bekerja {FFFF00}Bus Driver {FFFFFF}Karena terlalu sering menabrak!");
+			SendClientMessage(playerid, COLOR_WHITE, "{ADDBE6}SIDEJOB: {FFFFFF}Kamu gagal bekerja {FFFF00}Bus Driver {FFFFFF}karena terlalu sering menabrak!");
 		}
 		return 1;
 	}
@@ -18794,7 +18795,7 @@ public OnPlayerEnterRaceCheckpoint(playerid)
 			DisablePlayerRaceCheckpoint(playerid);
 			OnBus[playerid] = 0;
 			SetVehicleToRespawn(GetPlayerVehicleID(playerid));
-			SendClientMessage(playerid, COLOR_LIGHTBLUE, "SIDEJOB : {FFFFFF}Kamu gagal bekerja {FFFF00}Bus Driver {FFFFFF}Karena terlalu sering menabrak!");
+			SendClientMessage(playerid, COLOR_WHITE, "{ADDBE6}SIDEJOB: {FFFFFF}Kamu gagal bekerja {FFFF00}Bus Driver {FFFFFF}karena terlalu sering menabrak!");
 		}
 		return 1;
 	}
@@ -18812,7 +18813,7 @@ public OnPlayerEnterRaceCheckpoint(playerid)
 			DisablePlayerRaceCheckpoint(playerid);
 			OnBus[playerid] = 0;
 			SetVehicleToRespawn(GetPlayerVehicleID(playerid));
-			SendClientMessage(playerid, COLOR_LIGHTBLUE, "SIDEJOB : {FFFFFF}Kamu gagal bekerja {FFFF00}Bus Driver {FFFFFF}Karena terlalu sering menabrak!");
+			SendClientMessage(playerid, COLOR_WHITE, "{ADDBE6}SIDEJOB: {FFFFFF}Kamu gagal bekerja {FFFF00}Bus Driver {FFFFFF}karena terlalu sering menabrak!");
 		}
 		return 1;
 	}
@@ -18830,7 +18831,7 @@ public OnPlayerEnterRaceCheckpoint(playerid)
 			DisablePlayerRaceCheckpoint(playerid);
 			OnBus[playerid] = 0;
 			SetVehicleToRespawn(GetPlayerVehicleID(playerid));
-			SendClientMessage(playerid, COLOR_LIGHTBLUE, "SIDEJOB : {FFFFFF}Kamu gagal bekerja {FFFF00}Bus Driver {FFFFFF}Karena terlalu sering menabrak!");
+			SendClientMessage(playerid, COLOR_WHITE, "{ADDBE6}SIDEJOB: {FFFFFF}Kamu gagal bekerja {FFFF00}Bus Driver {FFFFFF}karena terlalu sering menabrak!");
 		}
 		return 1;
 	}
@@ -18848,7 +18849,7 @@ public OnPlayerEnterRaceCheckpoint(playerid)
 			DisablePlayerRaceCheckpoint(playerid);
 			OnBus[playerid] = 0;
 			SetVehicleToRespawn(GetPlayerVehicleID(playerid));
-			SendClientMessage(playerid, COLOR_LIGHTBLUE, "SIDEJOB : {FFFFFF}Kamu gagal bekerja {FFFF00}Bus Driver {FFFFFF}Karena terlalu sering menabrak!");
+			SendClientMessage(playerid, COLOR_WHITE, "{ADDBE6}SIDEJOB: {FFFFFF}Kamu gagal bekerja {FFFF00}Bus Driver {FFFFFF}karena terlalu sering menabrak!");
 		}
 		return 1;
 	}
@@ -18866,7 +18867,7 @@ public OnPlayerEnterRaceCheckpoint(playerid)
 			DisablePlayerRaceCheckpoint(playerid);
 			OnBus[playerid] = 0;
 			SetVehicleToRespawn(GetPlayerVehicleID(playerid));
-			SendClientMessage(playerid, COLOR_LIGHTBLUE, "SIDEJOB : {FFFFFF}Kamu gagal bekerja {FFFF00}Bus Driver {FFFFFF}Karena terlalu sering menabrak!");
+			SendClientMessage(playerid, COLOR_WHITE, "{ADDBE6}SIDEJOB: {FFFFFF}Kamu gagal bekerja {FFFF00}Bus Driver {FFFFFF}karena terlalu sering menabrak!");
 		}
 		return 1;
 	}
@@ -18884,14 +18885,14 @@ public OnPlayerEnterRaceCheckpoint(playerid)
 			DisablePlayerRaceCheckpoint(playerid);
 			OnBus[playerid] = 0;
 			SetVehicleToRespawn(GetPlayerVehicleID(playerid));
-			SendClientMessage(playerid, COLOR_LIGHTBLUE, "SIDEJOB : {FFFFFF}Kamu gagal bekerja {FFFF00}Bus Driver {FFFFFF}Karena terlalu sering menabrak!");
+			SendClientMessage(playerid, COLOR_WHITE, "{ADDBE6}SIDEJOB: {FFFFFF}Kamu gagal bekerja {FFFF00}Bus Driver {FFFFFF}karena terlalu sering menabrak!");
 		}
 		return 1;
 	}
 	else if(OnBus[playerid] == 19)
 	{
-	    SendClientMessageEx(playerid, COLOR_YELLOW, "SIDEJOB  {FFFFFF}Kamu berhasil menyelesaikan pekerjaan!");
-		SendClientMessageEx(playerid, COLOR_YELLOW, "SIDEJOB  {FFFFFF}Kamu menerima {00FF00}$50 {FFFFFF}di saku dan {00FF00}$150 {FFFFFF}di Salary!");
+	    SendClientMessageEx(playerid, COLOR_SERVER, "SIDEJOB:  {FFFFFF}Kamu berhasil menyelesaikan pekerjaan!");
+		SendClientMessageEx(playerid, COLOR_SERVER, "SIDEJOB:  {FFFFFF}Kamu menerima {00FF00}$50 {FFFFFF}di saku dan {00FF00}$150 {FFFFFF}di salary!");
         PlayerData[playerid][pBusT] = 900;
         PlayerData[playerid][pPayCheck] += 150;
         DisablePlayerRaceCheckpoint(playerid);
@@ -18917,7 +18918,7 @@ public OnPlayerEnterCheckpoint(playerid)
 			DisablePlayerCheckpoint(playerid);
 			OnSweeping[playerid] = 0;
 			SetVehicleToRespawn(GetPlayerVehicleID(playerid));
-			SendClientMessage(playerid, COLOR_LIGHTBLUE, "SIDEJOB : {FFFFFF}You failed to work because you hit too many times.");
+			SendClientMessage(playerid, COLOR_SERVER, "SIDEJOB: {FFFFFF}You failed to work because you hit too many times.");
 		}
 		return 1;
 	}
@@ -18935,7 +18936,7 @@ public OnPlayerEnterCheckpoint(playerid)
 			DisablePlayerCheckpoint(playerid);
 			OnSweeping[playerid] = 0;
 			SetVehicleToRespawn(GetPlayerVehicleID(playerid));
-			SendClientMessage(playerid, COLOR_LIGHTBLUE, "SIDEJOB : {FFFFFF}You failed to work because you hit too many times.");
+			SendClientMessage(playerid, COLOR_SERVER, "SIDEJOB: {FFFFFF}You failed to work because you hit too many times.");
 		}
 		return 1;
 	}
@@ -18953,7 +18954,7 @@ public OnPlayerEnterCheckpoint(playerid)
 			DisablePlayerCheckpoint(playerid);
 			OnSweeping[playerid] = 0;
 			SetVehicleToRespawn(GetPlayerVehicleID(playerid));
-			SendClientMessage(playerid, COLOR_LIGHTBLUE, "SIDEJOB : {FFFFFF}You failed to work because you hit too many times.");
+			SendClientMessage(playerid, COLOR_SERVER, "SIDEJOB: {FFFFFF}You failed to work because you hit too many times.");
 		}
 		return 1;
 	}
@@ -18971,7 +18972,7 @@ public OnPlayerEnterCheckpoint(playerid)
 			DisablePlayerCheckpoint(playerid);
 			OnSweeping[playerid] = 0;
 			SetVehicleToRespawn(GetPlayerVehicleID(playerid));
-			SendClientMessage(playerid, COLOR_LIGHTBLUE, "SIDEJOB : {FFFFFF}You failed to work because you hit too many times.");
+			SendClientMessage(playerid, COLOR_SERVER, "SIDEJOB: {FFFFFF}You failed to work because you hit too many times.");
 		}
 		return 1;
 	}
@@ -18989,7 +18990,7 @@ public OnPlayerEnterCheckpoint(playerid)
 			DisablePlayerCheckpoint(playerid);
 			OnSweeping[playerid] = 0;
 			SetVehicleToRespawn(GetPlayerVehicleID(playerid));
-			SendClientMessage(playerid, COLOR_LIGHTBLUE, "SIDEJOB : {FFFFFF}You failed to work because you hit too many times.");
+			SendClientMessage(playerid, COLOR_SERVER, "SIDEJOB: {FFFFFF}You failed to work because you hit too many times.");
 		}
 		return 1;
 	}
@@ -19007,7 +19008,7 @@ public OnPlayerEnterCheckpoint(playerid)
 			DisablePlayerCheckpoint(playerid);
 			OnSweeping[playerid] = 0;
 			SetVehicleToRespawn(GetPlayerVehicleID(playerid));
-			SendClientMessage(playerid, COLOR_LIGHTBLUE, "SIDEJOB : {FFFFFF}You failed to work because you hit too many times.");
+			SendClientMessage(playerid, COLOR_SERVER, "SIDEJOB: {FFFFFF}You failed to work because you hit too many times.");
 		}
 		return 1;
 	}
@@ -19025,7 +19026,7 @@ public OnPlayerEnterCheckpoint(playerid)
 			DisablePlayerCheckpoint(playerid);
 			OnSweeping[playerid] = 0;
 			SetVehicleToRespawn(GetPlayerVehicleID(playerid));
-			SendClientMessage(playerid, COLOR_LIGHTBLUE, "SIDEJOB : {FFFFFF}You failed to work because you hit too many times.");
+			SendClientMessage(playerid, COLOR_SERVER, "SIDEJOB: {FFFFFF}You failed to work because you hit too many times.");
 		}
 		return 1;
 	}
@@ -19043,7 +19044,7 @@ public OnPlayerEnterCheckpoint(playerid)
 			DisablePlayerCheckpoint(playerid);
 			OnSweeping[playerid] = 0;
 			SetVehicleToRespawn(GetPlayerVehicleID(playerid));
-			SendClientMessage(playerid, COLOR_LIGHTBLUE, "SIDEJOB : {FFFFFF}You failed to work because you hit too many times.");
+			SendClientMessage(playerid, COLOR_SERVER, "SIDEJOB: {FFFFFF}You failed to work because you hit too many times.");
 		}
 		return 1;
 	}
@@ -19053,8 +19054,8 @@ public OnPlayerEnterCheckpoint(playerid)
 		OnSweeping[playerid] = 0;
 		GiveMoney(playerid, 100);
 		PlayerData[playerid][pPayCheck] += 70;
-		SendClientMessage(playerid, COLOR_YELLOW, "SIDEJOB: {FFFFFF}Kamu berhasil menyelesaikan pekerjaan!");
-		SendClientMessage(playerid, COLOR_YELLOW, "SIDEJOB: {FFFFFF}Kamu menerima {00FF00}$30 {FFFFFF}di saku dan {00FF00}$70 {FFFFFF}di Salary.");
+		SendClientMessage(playerid, COLOR_SERVER, "SIDEJOB: {FFFFFF}Kamu berhasil menyelesaikan pekerjaan!");
+		SendClientMessage(playerid, COLOR_SERVER, "SIDEJOB: {FFFFFF}Kamu menerima {00FF00}$30 {FFFFFF}di saku dan {00FF00}$70 {FFFFFF}di Salary.");
 		SetVehicleToRespawn(GetPlayerVehicleID(playerid));
 		PlayerData[playerid][pSweeperT] = 600;
 		return 1;
@@ -20865,20 +20866,6 @@ public OnGameModeInit()
 	TextDrawAlignment(Blind2, 3);
 	TextDrawUseBox(Blind2, true);
 	TextDrawBoxColor(Blind2, 0x2F221AFF);
-
-	HighMild = TextDrawCreate(32.000000, 431.000000, "High Mild Roleplay");
-	TextDrawFont(HighMild, 1);
-	TextDrawLetterSize(HighMild, 0.225000, 1.000000);
-	TextDrawTextSize(HighMild, 400.000000, 17.000000);
-	TextDrawSetOutline(HighMild, 1);
-	TextDrawSetShadow(HighMild, 0);
-	TextDrawAlignment(HighMild, 1);
-	TextDrawColor(HighMild, -1);
-	TextDrawBackgroundColor(HighMild, 255);
-	TextDrawBoxColor(HighMild, 50);
-	TextDrawUseBox(HighMild, 0);
-	TextDrawSetProportional(HighMild, 1);
-	TextDrawSetSelectable(HighMild, 0);
 
     gServerTextdraws[2] = TextDrawCreate(11.000000, 430.000000, "~r~You are injured!~w~ /call 911 or /giveup.");
 	TextDrawBackgroundColor(gServerTextdraws[2], 255);
@@ -37227,7 +37214,7 @@ Dialog:LoginScreen(playerid, response, listitem, inputtext[])
 	    return Kick(playerid);
 
 	else if (isnull(inputtext))
-	    return Dialog_Show(playerid, LoginScreen, DIALOG_STYLE_PASSWORD, "LOGIN", "{FFFFFF}Selamat datang di server {FFFF00}High Mild Roleplay{FFFFFF}\nAkunmu terdaftar sebagai {8FCF46}%s.{FFFFFF}\nMasukkan password di kolom bawah ini:", "Login", "Keluar", PlayerData[playerid][pUsername]);
+	    return Dialog_Show(playerid, LoginScreen, DIALOG_STYLE_PASSWORD, "Welcome to Project Two - Login", "{FFFFFF}Username: {FFFF00}%s\nEnter your password:", "Login", "Cancel", PlayerData[playerid][pUsername]);
 
 	else
 	{
