@@ -1,0 +1,5 @@
+AddSimpleModel(-1, 2660, -5004, "td.dff", "phone.txd");
+AddSimpleModel(-1, 2660, -5005, "td.dff", "menu.txd");
+AddSimpleModel(-1, 19355, -5009, "lift1.dff", "lift.txd");
+AddSimpleModel(-1, 19355, -5010, "lift2.dff", "lift.txd");
+AddSimpleModel(-1, 2660, -5006, "td.dff", "twitter.txd");

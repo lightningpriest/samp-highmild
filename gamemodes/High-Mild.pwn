@@ -56,14 +56,15 @@ Gamemode Info:
 #include <foreach>
 #include <easyDialog>
 #include <eSelection>
-#include <progress2>
+#include <progressbar>
+#include <playerprogress>
 #include <sscanf2>
 #include <streamer>
 #include <zcmd>
 #include <geoiplite>
 #include <discord-connector>
 #include <callbacks>
-#include <crashdetect>
+//#include <crashdetect>
 #include <cpn>
 
 
@@ -110,7 +111,7 @@ Gamemode Info:
 #define COLOR_FADVERT     (0x00AA00FF)
 #define COLOR_WHATSAPP    (0xCCFFCC)
 #define COLOR_ADGREEN     (0x32a852FF)
-
+#define COLOR_TWAQUA 	  (0x00FFFF00)
 #define THREAD_CREATE_CHAR (1)
 #define THREAD_CHECK_ACCOUNT (2)
 #define THREAD_LOGIN (3)
@@ -161,6 +162,23 @@ Gamemode Info:
 #define JOB_SORTER (8)
 #define JOB_WEAPON_SMUGGLER (9)
 
+
+#define PRESSED(%0) (((newkeys & (%0)) == (%0)) && ((oldkeys & (%0)) != (%0)))
+
+//Damage System
+#define     MAX_DAMAGES         15
+
+#define     SCM                 SendClientMessage
+#define     SNM                 SendNearMessage
+#define     FORMAT:%0(%1)       format(%0, sizeof(%0), %1)
+
+#define     BODY_PART_TORSO     3
+#define     BODY_PART_GROIN     4
+#define     BODY_PART_RIGHT_ARM 5
+#define     BODY_PART_LEFT_ARM  6
+#define     BODY_PART_RIGHT_LEG 7
+#define     BODY_PART_LEFT_LEG  8
+#define     BODY_PART_HEAD      9
 
 #define SendServerMessage(%0,%1) \
 	SendClientMessageEx(%0, COLOR_SERVER, "SERVER: "%1)
@@ -240,9 +258,28 @@ Gamemode Info:
 #define DIALOG_WORKSHOP 13733
 #define DIALOG_TOGGLE 17763
 #define DIALOG_SWEEPER 17764
+#define DIALOG_DAMAGE 17765
+#define DIALOG_BUS 17767
+#define DIALOG_TWITTER 17768
+#define DIALOG_GARASI 17769
+#define DIALOG_STATUS 17770
+
+new lift;
+new garasi[6];
+new bool:glift;
+new bool:ggarasi;
+new bool:ggarasi2;
 
 new SWEEPER[3];
+new FORKLIFT[4];
+new BUS[3];
+new WHOPEE[3];
+new UTILITY[4];
 new OnSweeping[MAX_PLAYERS];
+new OnBus[MAX_PLAYERS];
+new ToggleTp[MAX_PLAYERS];
+new SedangCarp[MAX_PLAYERS];
+new DapatFurn[MAX_PLAYERS];
 new SedangMine[MAX_PLAYERS];
 new SedangMining[MAX_PLAYERS];
 new DapatBatu[MAX_PLAYERS];
@@ -250,12 +287,41 @@ new TruckingCheck[MAX_PLAYERS];
 new Text3D:vehicle3Dtext[MAX_VEHICLES];
 new vehiclecallsign[MAX_VEHICLES];
 new Text:BlackBoxHunger;
+new PlayerText:TWITTER[MAX_PLAYERS];
+new PlayerText:TWITTER_TEXT[MAX_PLAYERS];
 new ServerAdvert;
 new CountingPlayer;
 new AdvertiseParams[MAX_PLAYERS][128];
 new Text:Blind, Text:Blind2;
 new Text:HighMild;
 new Text:GetDateHMR;
+
+//Phone Textdraws
+new PlayerText:PHONE[MAX_PLAYERS];
+new PlayerText:PHONE_HOME[MAX_PLAYERS];
+new PlayerText:PHONE_TELP[MAX_PLAYERS];
+new PlayerText:PHONE_CONTACT[MAX_PLAYERS];
+new PlayerText:PHONE_SMS[MAX_PLAYERS];
+new PlayerText:PHONE_CAMERA[MAX_PLAYERS];
+new PlayerText:PHONE_TWITTER[MAX_PLAYERS];
+
+//Radial Menu
+new PlayerText:MENU[MAX_PLAYERS];
+new PlayerText:MENU_X[MAX_PLAYERS];
+new PlayerText:MENU_STATS[MAX_PLAYERS];
+new PlayerText:MENU_INVEN[MAX_PLAYERS];
+new PlayerText:MENU_PHONE[MAX_PLAYERS];
+
+//Selfie system
+new takingselfie[MAX_PLAYERS];
+new Float:Degree[MAX_PLAYERS];
+const Float: Radius = 1.4; //do not edit this
+const Float: Speed  = 1.25; //do not edit this
+const Float: Height = 1.0; // do not edit this
+//new Text:Textdraw2;
+new Float:lX[MAX_PLAYERS];
+new Float:lY[MAX_PLAYERS];
+new Float:lZ[MAX_PLAYERS];
 
 enum playerData {
 	pID,
@@ -276,6 +342,7 @@ enum playerData {
 	pHat,
 	pBandana,
 	pRoleplayName[MAX_PLAYER_NAME],
+	pNamaFix[MAX_PLAYER_NAME],
 	Float:pPos[4],
 	Float:pHealth,
 	pInterior,
@@ -288,6 +355,7 @@ enum playerData {
 	pKilled,
 	pMoney,
 	pBankMoney,
+	pPayCheck,
 	pOwnsBillboard,
 	pSavings,
 	pAdmin,
@@ -296,6 +364,7 @@ enum playerData {
 	pReportTime,
 	pHelpTime,
 	pSweeperT,
+	pBusT,
 	pSpectator,
 	pJailTime,
 	pKicked,
@@ -429,6 +498,7 @@ enum playerData {
 	Float:pWaypointPos[3],
 	pFuelCan,
 	pDisableOOC,
+	pDisableTwt,
 	pDisablePM,
 	pDisableFaction,
 	pDisableHelper,
@@ -494,7 +564,8 @@ enum playerData {
  	pWarn1[32],
 	pWarn2[32],
 	pDonator,
-	pForumName[32],
+	pStatusTW[MAX_PLAYER_NAME],
+	pForumName[MAX_PLAYER_NAME],
 	pFightStyle,
 	pSorting,
 	pSortCrate,
@@ -502,6 +573,7 @@ enum playerData {
 	pAdminDuty,
 	pSeekHelp,
 	pHUD,
+	pTwitter,
 	pMaskID,
 	pMaskOn,
 	pHideTags,
@@ -561,6 +633,17 @@ enum inventoryData {
 	invModel,
 	invQuantity
 };
+
+
+enum dmgInfo
+{
+    dmgDamage,
+    dmgWeapon,
+    dmgBodypart,
+    dmgKevlarhit,
+    dmgSeconds,
+}
+new DamageInfo[MAX_PLAYERS][MAX_DAMAGES][dmgInfo];
 
 enum houseData {
 	houseID,
@@ -1892,6 +1975,82 @@ SQL_AttemptLogin(playerid, const password[])
 stock SQL_IsLogged(playerid) {
 	return (PlayerData[playerid][pLogged] && PlayerData[playerid][pCharacter] > 0);
 }
+//Damage System
+
+stock ResetPlayerDamages(playerid)
+{
+    for(new id = 0; id < MAX_DAMAGES; id++)
+    {
+        if(DamageInfo[playerid][id][dmgDamage] != 0)
+        {
+            DamageInfo[playerid][id][dmgDamage] = 0;
+            DamageInfo[playerid][id][dmgWeapon] = 0;
+            DamageInfo[playerid][id][dmgBodypart] = 0;
+            DamageInfo[playerid][id][dmgKevlarhit] = 0;
+            DamageInfo[playerid][id][dmgSeconds] = 0;
+        }
+    }
+    return 1;
+}
+
+stock ShowPlayerDamages(playerid, toid)
+{
+    new
+        str[1000],
+        str1[500],
+        count = 0,
+        name[MAX_PLAYER_NAME];
+
+    GetPlayerName(playerid, name, sizeof(name));
+    for(new id = 0; id < MAX_DAMAGES; id++)
+    {
+        if(DamageInfo[playerid][id][dmgDamage] != 0) count++;
+    }
+    if(count == 0) return ShowPlayerDialog(toid, DIALOG_DAMAGE, DIALOG_STYLE_LIST, name, "There is no damage", "Close", "");
+    else if(count > 0)
+    {
+        for(new id = 0; id < MAX_DAMAGES; id++)
+        {
+            if(DamageInfo[playerid][id][dmgDamage] != 0)
+            {
+                FORMAT:str1("%d dmg from %s to %s (Kevlarhit: %d) %d s ago\n", DamageInfo[playerid][id][dmgDamage], GetWeaponNameEx(DamageInfo[playerid][id][dmgWeapon]), GetBodypartName(DamageInfo[playerid][id][dmgBodypart]), DamageInfo[playerid][id][dmgKevlarhit], gettime() - DamageInfo[playerid][id][dmgSeconds]);
+                strcat(str, str1);
+            }
+            else if(DamageInfo[playerid][id][dmgDamage] != 0 && id >= MAX_DAMAGES)
+            {
+                FORMAT:str1("You seems taking to many damage....");
+                strcat(str, str1);
+            }
+        }
+        ShowPlayerDialog(toid, DIALOG_DAMAGE, DIALOG_STYLE_LIST, name, str, "Close", "");
+    }
+    return 1;
+}
+
+
+stock GetWeaponNameEx(weaponid)
+{
+    new weaponname[60];
+    GetWeaponName(weaponid, weaponname, sizeof(weaponname));
+    return weaponname;
+}
+
+stock GetBodypartName(bodypart)
+{
+    new bodyname[60];
+    switch(bodypart)
+    {
+        case BODY_PART_TORSO: FORMAT:bodyname("TORSO");
+        case BODY_PART_GROIN: FORMAT:bodyname("GROIN");
+        case BODY_PART_RIGHT_ARM: FORMAT:bodyname("RIGHT ARM");
+        case BODY_PART_LEFT_ARM: FORMAT:bodyname("LEFT ARM");
+        case BODY_PART_RIGHT_LEG: FORMAT:bodyname("RIGHT ARM");
+        case BODY_PART_LEFT_LEG: FORMAT:bodyname("LEFT LEG");
+        case BODY_PART_HEAD: FORMAT:bodyname("HEAD");
+    }
+    return bodyname;
+}
+
 stock Float:cache_get_field_float(row, const field_name[])
 {
 	new
@@ -1953,7 +2112,7 @@ SQL_SaveCharacter(playerid)
 			UpdateWeapons(playerid);
 		}
 	}
-	format(query, sizeof(query), "UPDATE `characters` SET `Created` = '%d', `Gender` = '%d', `Birthdate` = '%s', `Origin` = '%s', `Skin` = '%d', `PosX` = '%.4f', `PosY` = '%.4f', `PosZ` = '%.4f', `PosA` = '%.4f', `Health` = '%.4f', `Interior` = '%d', `World` = '%d', `Hospital` = '%d', `HospitalInt` = '%d', `Money` = '%d', `BankMoney` = '%d', `OwnsBillboard` = '%d', `Savings` = '%d', `Admin` = '%d', `JailTime` = '%d', `Muted` = '%d', `Helper` = '%d', `SwDelay` = '%d'",
+	format(query, sizeof(query), "UPDATE `characters` SET `Created` = '%d', `Gender` = '%d', `Birthdate` = '%s', `Origin` = '%s', `Skin` = '%d', `PosX` = '%.4f', `PosY` = '%.4f', `PosZ` = '%.4f', `PosA` = '%.4f', `Health` = '%.4f', `Interior` = '%d', `World` = '%d', `Hospital` = '%d', `HospitalInt` = '%d', `Money` = '%d', `BankMoney` = '%d', `OwnsBillboard` = '%d', `Savings` = '%d', `Admin` = '%d', `JailTime` = '%d', `Muted` = '%d', `Helper` = '%d', `SwDelay` = '%d', `BusDelay` = '%d', `PlayerSalary` = '%d', `HaveTwitter` = '%d'",
 		PlayerData[playerid][pCreated],
 		PlayerData[playerid][pGender],
 		PlayerData[playerid][pBirthdate],
@@ -1976,7 +2135,10 @@ SQL_SaveCharacter(playerid)
 		PlayerData[playerid][pJailTime],
 		PlayerData[playerid][pMuted],
   		PlayerData[playerid][pHelper],
-  		PlayerData[playerid][pSweeperT]
+  		PlayerData[playerid][pSweeperT],
+  		PlayerData[playerid][pBusT],
+  		PlayerData[playerid][pPayCheck],
+  		PlayerData[playerid][pTwitter]
 	);
 	for (new i = 0; i < 13; i ++) {
 		format(query, sizeof(query), "%s, `Gun%d` = '%d', `Ammo%d` = '%d'", query, i + 1, PlayerData[playerid][pGuns][i], i + 1, PlayerData[playerid][pAmmo][i]);
@@ -2197,12 +2359,12 @@ public OnBillboardCreated(bizid)
 	return 1;
 }
 
-public OnVehicleSirenStateChange(playerid, vehicleid, newstate)
+/*public OnVehicleSirenStateChange(playerid, vehicleid, newstate)
 {
     if(newstate) ShowPlayerFooter(playerid, "You have turned ~g~ON~w~ the siren sound!");
     else ShowPlayerFooter(playerid, "You have turned ~g~OFF~w~ the siren sound!");
     return 1;
-}
+}*/
 
 forward Billboard_Load();
 public Billboard_Load()
@@ -2578,18 +2740,137 @@ public Advertise(playerid)
 
 public OnDialogResponse(playerid, dialogid, response, listitem, inputtext[])
 {
+	if(dialogid == DIALOG_GARASI)
+	{
+	   if(response)
+	   {
+			if(listitem == 0)
+			{
+			    if(ggarasi == false)
+			    {
+			        MoveDynamicObject(garasi[0], 317.208282, -28.462129, 4.818768, 1.00, -54.399898, 0.000057, 0.000037);
+			        MoveDynamicObject(garasi[1], 317.195251, -28.448009, 4.933393, 1.00, -54.399898, 0.000057, 0.000037);
+			        MoveDynamicObject(garasi[2], 317.195251, -28.334177, 5.014891, 1.00, -54.399898, 0.000057, 0.000037);
+			        ggarasi = true;
+			        SendClientMessage(playerid, COLOR_ORANGE, "GARAGE 1: {FFFFFF}Opened");
+				}
+				else
+				{
+				    MoveDynamicObject(garasi[0], 317.208282, -29.758142, 2.154839, 1.00, 0.000000, 0.000000, 0.000000);
+				    MoveDynamicObject(garasi[1], 317.195251, -29.843124, 2.233045, 1.00, 0.000000, 0.000000, 0.000000);
+				    MoveDynamicObject(garasi[2], 317.195251, -29.843124, 2.373045, 1.00, 0.000000, 0.000000, 0.000000);
+				    ggarasi = false;
+				    SendClientMessage(playerid, COLOR_ORANGE, "GARAGE 1: {FFFFFF}Closed.");
+				}
+		    }
+		    if(listitem == 1)
+			{
+   				if(ggarasi2 == false)
+	    		{
+			        MoveDynamicObject(garasi[3], 322.508453, -28.462129, 4.818768, 1.00, -54.399898, 0.000057, 0.000037);
+			        MoveDynamicObject(garasi[4], 323.608154, -27.737827, 5.439125, 1.00, -54.399898, 0.000057, 0.000037);
+			        MoveDynamicObject(garasi[5], 322.565185, -28.448009, 4.933393, 1.00, -54.399898, 0.000057, 0.000037);
+			        ggarasi2 = true;
+			        SendClientMessage(playerid, COLOR_ORANGE, "GARAGE 2: {FFFFFF}Opened");
+				}
+				else
+				{
+				    MoveDynamicObject(garasi[3], 322.508453, -29.758142, 2.154839, 1.00, 0.000000, 0.000000, 0.000000);
+				    MoveDynamicObject(garasi[4], 323.608154, -29.840919, 3.104894, 1.00, 0.000000, 0.000000, 0.000000);
+				    MoveDynamicObject(garasi[5], 322.565185, -29.843124, 2.233045, 1.00, 0.000000, 0.000000, 0.000000);
+				    ggarasi2 = false;
+				    SendClientMessage(playerid, COLOR_ORANGE, "GARAGE 2: {FFFFFF}Closed");
+				}
+			}
+		}
+	}
+	if(dialogid == DIALOG_TWITTER)
+	{
+		if(response)
+		{
+			if(listitem == 0)
+			{
+				if (!PlayerData[playerid][pDisableTwt])
+				{
+				    PlayerData[playerid][pDisableTwt] = 1;
+				 	SendServerMessage(playerid, "{FFFFFF}Kamu telah menonaktifkan Twitter chat!");
+				}
+				else
+				{
+					PlayerData[playerid][pDisableTwt] = 0;
+					SendServerMessage(playerid, "{FFFFFF}Kamu telah mengaktifkan Twitter Chat");
+				}
+			}
+			if(listitem == 1)
+			{
+			    new messageString[128];
+				if (!PlayerData[playerid][pDisableTwt])
+				{
+					format(messageString, sizeof(messageString), "{FFFFFF}Masukan Status Twitter-mu :");
+					ShowPlayerDialog( playerid, DIALOG_STATUS, DIALOG_STYLE_INPUT, "{00FFFF}Twitter Status",messageString, "Continue", "Cancel" );
+				}
+				else
+				{
+					SendServerMessage(playerid, "Kamu belum mengaktiflan Twitter!");
+				}
+			}
+		}
+	}
+	if(dialogid == DIALOG_STATUS)
+	{
+		if(response)
+		{
+		    new string[256];
+		    if(strlen(inputtext) < 40)
+		    {
+		        format(PlayerData[playerid][pStatusTW], MAX_PLAYER_NAME, "%s", inputtext);
+		        SendClientMessage(playerid, COLOR_TWAQUA, "TWITTER: {FFFFFF}Sukses meng-update Status Twitter-mu!");
+				format(string, sizeof(string), "TWITTER: {FFFF00}@%s {FFFFFF}Baru saja meng-Update Status.", PlayerData[playerid][pUsername]);
+				SendTwitterMessage(COLOR_TWAQUA, string);
+				foreach (new i : Player)
+				{
+					if(!PlayerData[i][pDisableTwt])
+					{
+						PlayerTextDrawShow(i, TWITTER[i]);
+						PlayerTextDrawShow(i, TWITTER_TEXT[i]);
+						format(string, sizeof(string), "%s", inputtext);
+					 	PlayerTextDrawSetString(i, TWITTER_TEXT[i], string);
+					 	SetTimerEx("HideNotif", 4000, false, "d", i);
+					}
+				}
+			}
+			else
+			{
+			    SendServerMessage(playerid, "{FFFFFF}Tidak boleh lebih dari 40 huruf!");
+			}
+		}
+ 	}
+	if(dialogid == DIALOG_BUS)
+	{
+		if(response)
+		{
+	     	OnBus[playerid] = 1;
+	     	SetPlayerRaceCheckpoint(playerid, 0, -28.9798,-322.8900,4.1110, -235.7787,-275.9762,0.7137, 5.0);
+	     	SendClientMessage(playerid, COLOR_YELLOW, "SIDEJOB : {FFFFFF}Follow all of Checkpoints on the map!");
+		}
+		else
+		{
+			RemovePlayerFromVehicle(playerid);
+			SendClientMessage(playerid, COLOR_YELLOW, "SIDEJOB : {FFFFFF}You're cancel for work as a {FFFF00}Bus Driver");
+		}
+	}
 	if(dialogid == DIALOG_SWEEPER)
 	{
 		if(response)
 		{
 	     	OnSweeping[playerid] = 1;
 	     	SetPlayerCheckpoint(playerid,1350.9368,277.8350,19.6041,6);
-	     	SendClientMessage(playerid, COLOR_BLUE, "SIDEJOB : {FFFFFF}Follow all of Checkpoints on the map!");
+	     	SendClientMessage(playerid, COLOR_YELLOW, "SIDEJOB : {FFFFFF}Follow all of Checkpoints on the map!");
 		}
 		else
 		{
 			RemovePlayerFromVehicle(playerid);
-			SendClientMessage(playerid, COLOR_BLUE, "SIDEJOB : {FFFFFF}You're cancel for work as a {FFFF00}Street Sweeper");
+			SendClientMessage(playerid, COLOR_YELLOW, "SIDEJOB : {FFFFFF}You're cancel for work as a {FFFF00}Street Sweeper");
 		}
 	}
     if(dialogid == DIALOG_BUYSEEDS)
@@ -2691,7 +2972,7 @@ public OnDialogResponse(playerid, dialogid, response, listitem, inputtext[])
 				{
 				switch (PlayerData[playerid][pJob])
 			    {
-	    		case 1: SendClientMessage(playerid, COLOR_WHITE, "{ADDBE6}JOBS:{FFFFFF} /startdelivery, /stoploading, /unload, /shipments.");
+	    		case 1: SendClientMessage(playerid, COLOR_WHITE, "{ADDBE6}JOBS:{FFFFFF} /getcargo, /stoploading, /unload, /shipments.");
 	    		case 2: SendClientMessage(playerid, COLOR_WHITE, "{ADDBE6}JOBS:{FFFFFF} /mechanicmenu, /buycomponent");
 	    		case 3: SendClientMessage(playerid, COLOR_WHITE, "{ADDBE6}JOBS:{FFFFFF} /taxi, /acceptcall.");
 	    		case 4: SendClientMessage(playerid, COLOR_WHITE, "{ADDBE6}JOBS:{FFFFFF} /loadcrate.");
@@ -2736,9 +3017,7 @@ public OnDialogResponse(playerid, dialogid, response, listitem, inputtext[])
 				}
             }
         }
-        return 1;
-}
-
+	}
     if(dialogid == DIALOG_MECHANICMENU)
     {
         if(response)
@@ -2749,13 +3028,13 @@ public OnDialogResponse(playerid, dialogid, response, listitem, inputtext[])
 				{
                  if (PlayerData[playerid][pJob] != JOB_MECHANIC)
                  return SendErrorMessage(playerid, "Kamu bukan seorang mekanik!");
- 
+
                  if (!Inventory_HasItem(playerid, "Component"))
                  return SendErrorMessage(playerid, "Kamu tidak memiliki Component.");
- 
+
                  if (Inventory_Count(playerid, "Component") < 200)
                  return SendErrorMessage(playerid, "Kamu tidak memiliki Component yang cukup.");
- 
+
                  SetTimerEx("EngineRepairTimer", 30000, false, "dd", playerid);
                  SendClientMessage(playerid, COLOR_WHITE, "{ADDBE6}REPAIR: {FFFFFF}Harap tunggu {FFFF00}30 detik {FFFFFF}agar mesin kendaraan dapat diperbaiki.");
 				 return 1;
@@ -2792,10 +3071,7 @@ public OnDialogResponse(playerid, dialogid, response, listitem, inputtext[])
 				}
             }
         }
-        return 1;
-}
-
-
+	}
 	switch(dialogid)
 	{
 		case 12211:
@@ -3070,13 +3346,28 @@ stock AdminRankName(playerid)
 {
 	 	new astring[28];
 		if (PlayerData[playerid][pAdmin] == 1)format(astring, sizeof(astring), "Trial Administrator");
+		else if (PlayerData[playerid][pAdmin] == 2)format(astring, sizeof(astring), "Admin level 1");
+		else if (PlayerData[playerid][pAdmin] == 3)format(astring, sizeof(astring), "Admin level 2");
+		else if (PlayerData[playerid][pAdmin] == 4)format(astring, sizeof(astring), "Admin level 3");
+		else if (PlayerData[playerid][pAdmin] == 5)format(astring, sizeof(astring), "Senior Admin");
+		else if (PlayerData[playerid][pAdmin] == 6)format(astring, sizeof(astring), "Lead Administrator");
+		else if (PlayerData[playerid][pAdmin] == 7)format(astring, sizeof(astring), "Head Administrator");
+		else if (PlayerData[playerid][pAdmin] == 8)format(astring, sizeof(astring), "Server Scripter");
+		else if (PlayerData[playerid][pAdmin] == 9)format(astring, sizeof(astring), "Server Owner");
+		return astring;
+}
+
+/*stock AdminRankName(playerid)
+{
+	 	new astring[28];
+		if (PlayerData[playerid][pAdmin] == 1)format(astring, sizeof(astring), "Trial Administrator");
 		else if (PlayerData[playerid][pAdmin] == 2)format(astring, sizeof(astring), "Administrator");
 		else if (PlayerData[playerid][pAdmin] == 3)format(astring, sizeof(astring), "Senior Administrator");
 		else if (PlayerData[playerid][pAdmin] == 4)format(astring, sizeof(astring), "Lead Administrator");
 		else if (PlayerData[playerid][pAdmin] == 5)format(astring, sizeof(astring), "Head Administrator");
 		else if (PlayerData[playerid][pAdmin] == 6)format(astring, sizeof(astring), "Server Owner");
 		return astring;
-}
+}*/
 
 stock HelperRankName(playerid)
 {
@@ -7721,29 +8012,27 @@ public FishingTimer(playerid)
 	PlayerData[playerid][pHunger] -= 2;
 	PlayerData[playerid][pThirst] -= 2;
 	ClearAnimations(playerid);
+	TogglePlayerControllable(playerid, 1);
 	for(new i=0; i<MAX_PLAYER_ATTACHED_OBJECTS; i++)
     {
         if (IsPlayerAttachedObjectSlotUsed(playerid, i)) RemovePlayerAttachedObject(playerid, i);
     }
 	return 1;
 }
-
 forward EngineRepairTimer(playerid);
 public EngineRepairTimer(playerid)
 {
- new
- vehicleid = GetPlayerVehicleID(playerid);
- SetEngineStatus(vehicleid, false);
- Inventory_Remove(playerid, "Component", 200);
- SetVehicleHealth(vehicleid, 1000);
- SendClientMessage(playerid, COLOR_WHITE, "{ADDBE6}REPAIR: {FFFFFF}Kamu telah memperbaiki {FFFF00}mesin kendaraan {FFFFFF}menggunakan {FF0000}200 Component.");
+    new vehicleid = GetPlayerVehicleID(playerid);
+	SetEngineStatus(vehicleid, false);
+	Inventory_Remove(playerid, "Component", 200);
+	SetVehicleHealth(vehicleid, 1000);
+	SendClientMessage(playerid, COLOR_WHITE, "{ADDBE6}REPAIR: {FFFFFF}Kamu telah memperbaiki {FFFF00}mesin kendaraan {FFFFFF}menggunakan {FF0000}200 Component.");
 }
 
 forward BodyRepairTimer(playerid);
 public BodyRepairTimer(playerid)
 {
-	new
-	vehicleid = GetPlayerVehicleID(playerid);
+    new vehicleid = GetPlayerVehicleID(playerid);
 	SetEngineStatus(vehicleid, false);
 	Inventory_Remove(playerid, "Component", 100);
 	RepairVehicle(vehicleid);
@@ -7753,8 +8042,7 @@ public BodyRepairTimer(playerid)
 forward InstallNosTimer(playerid);
 public InstallNosTimer(playerid)
 {
-	new
-	vehicleid = GetPlayerVehicleID(playerid);
+	new vehicleid = GetPlayerVehicleID(playerid);
 	SetEngineStatus(vehicleid, false);
 	Inventory_Remove(playerid, "Component", 250);
 	AddComponent(vehicleid, 1010);
@@ -7904,7 +8192,6 @@ public RepairCar(playerid, vehicleid)
 
 	PlayerData[playerid][pRepairTime] = gettime() + 60;
 	SendNearbyMessage(playerid, 30.0, COLOR_PURPLE, "** %s has successfully repaired the vehicle.", ReturnName(playerid, 0));
-
 	return 1;
 }
 
@@ -9326,7 +9613,7 @@ Job_Refresh(jobid)
 		format(string, sizeof(string), "{ADD8E6}[%s]\n{FFFFFF}Type {FFFF00}/takejob {FFFFFF}to acquire this job!", Job_GetName(JobData[jobid][jobType]));
 
 		if (JobData[jobid][jobType] == 1) {
-		    JobData[jobid][jobText3D][1] = CreateDynamic3DTextLabel("{ADD8E6}[Courier]\n{FFFFFF}Type /startdelivery to start a delivery.", COLOR_DEPARTMENT, JobData[jobid][jobPoint][0], JobData[jobid][jobPoint][1], JobData[jobid][jobPoint][2], 15.0, INVALID_PLAYER_ID, INVALID_VEHICLE_ID, 0, JobData[jobid][jobPointWorld], JobData[jobid][jobPointInt]);
+		    JobData[jobid][jobText3D][1] = CreateDynamic3DTextLabel("{ADD8E6}[Courier]\n{FFFFFF}Type /getcargo to get a Cargo.", COLOR_DEPARTMENT, JobData[jobid][jobPoint][0], JobData[jobid][jobPoint][1], JobData[jobid][jobPoint][2], 15.0, INVALID_PLAYER_ID, INVALID_VEHICLE_ID, 0, JobData[jobid][jobPointWorld], JobData[jobid][jobPointInt]);
 			JobData[jobid][jobPickups][1] = CreateDynamicPickup(1239, 23, JobData[jobid][jobPoint][0], JobData[jobid][jobPoint][1], JobData[jobid][jobPoint][2], JobData[jobid][jobPointWorld], JobData[jobid][jobPointInt]);
 		}
 		else if (JobData[jobid][jobType] == 5) {
@@ -11012,7 +11299,7 @@ ReturnIP(playerid)
 		PlayerData[playerid][pDisplayStats] = false;
 	}
 	return 1;
-}*/
+}
 
 ShowStats(playerid, targetid)
 {	 
@@ -11021,7 +11308,7 @@ ShowStats(playerid, targetid)
  	 format(string, sizeof(string), "{FFFF00}IC Information\n{FFFFFF}Name: [{ADDBE6}%s{FFFFFF}] Origin: [{ADDBE6}%s{FFFFFF}] Money: [{00FF00}%s{FFFFFF}] Bank: [{00FF00}%s{FFFFFF}] Phone number: [{ADDBE6}%d{FFFFFF}]\nJobs: [{00EAFF}%s{FFFFFF}]\nFaction: [{00EAFF}%s{FFFFFF}] Rank: [{00FF00}%s{FFFFFF}]\nMask Number: [{ADDBE6}%d{FFFFFF}] Birthdate: [{ADDBE6}%s{FFFFFF}] Gender: [{ADDBE6}%s{FFFFFF}]\n\n{FFFF00}OOC Information{FFFFFF}\nUsername: [{ADDBE6}%s{FFFFFF}] Time played: [{00EAFF}%d hours{FFFFFF}]", ReturnName(playerid, 0), PlayerData[i][pOrigin], FormatNumber(PlayerData[i][pMoney]), FormatNumber(PlayerData[i][pBankMoney]), PlayerData[i][pPhone], Job_GetName(PlayerData[i][pJob]), Faction_GetName(i), Faction_GetRank(i), PlayerData[i][pMaskID], PlayerData[i][pBirthdate], (PlayerData[i][pGender] == 2) ? ("Female") : ("Male"), PlayerData[i][pUsername], PlayerData[i][pPlayingHours]);
 	 ShowPlayerDialog(playerid, DIALOG_STATS, DIALOG_STYLE_MSGBOX, "Character Statistic", string, "Close", "");
  	 return 1;
-}
+}*/
 Blacklist_Add(ip[], username[], banner[], reason[])
 {
 	static
@@ -11815,7 +12102,61 @@ IsValidPlayerName(const str[])
 	}
 	return 1;
 }
-//Sweeper Stocks
+
+stock GetDistanceToCar(playerid, veh, Float: posX = 0.0, Float: posY = 0.0, Float: posZ = 0.0) {
+
+	new
+	    Float: Floats[2][3];
+
+	if(posX == 0.0 && posY == 0.0 && posZ == 0.0) {
+		if(!IsPlayerInAnyVehicle(playerid)) GetPlayerPos(playerid, Floats[0][0], Floats[0][1], Floats[0][2]);
+		else GetVehiclePos(GetPlayerVehicleID(playerid), Floats[0][0], Floats[0][1], Floats[0][2]);
+	}
+	else {
+		Floats[0][0] = posX;
+		Floats[0][1] = posY;
+		Floats[0][2] = posZ;
+	}
+	GetVehiclePos(veh, Floats[1][0], Floats[1][1], Floats[1][2]);
+	return floatround(floatsqroot((Floats[1][0] - Floats[0][0]) * (Floats[1][0] - Floats[0][0]) + (Floats[1][1] - Floats[0][1]) * (Floats[1][1] - Floats[0][1]) + (Floats[1][2] - Floats[0][2]) * (Floats[1][2] - Floats[0][2])));
+}
+
+stock GetClosestCar(playerid, exception = INVALID_VEHICLE_ID)
+{
+
+    new
+		Float: Distance,
+		target = -1,
+		Float: vPos[3];
+
+	if(!IsPlayerInAnyVehicle(playerid)) GetPlayerPos(playerid, vPos[0], vPos[1], vPos[2]);
+	else GetVehiclePos(GetPlayerVehicleID(playerid), vPos[0], vPos[1], vPos[2]);
+
+    for(new v; v < MAX_VEHICLES; v++) if(GetVehicleModel(v) >= 400) {
+        if(v != exception && (target < 0 || Distance > GetDistanceToCar(playerid, v, vPos[0], vPos[1], vPos[2]))) {
+            target = v;
+            Distance = GetDistanceToCar(playerid, v, vPos[0], vPos[1], vPos[2]);
+        }
+    }
+    return target;
+}
+
+stock IsPlayerDistanceFromVeh(playerid, Float: radius)
+{
+	new
+		Float:Floats[3];
+
+	for( new i = 0; i < MAX_VEHICLES; i++ ) {
+	    GetVehiclePos(i, Floats[0], Floats[1], Floats[2]);
+	    if( IsPlayerInRangeOfPoint(playerid, radius, Floats[0], Floats[1], Floats[2]) ) {
+		    return i;
+		}
+	}
+
+	return false;
+}
+
+//Static Vehicle Stocks
 IsSWEEPERCAR(carid)
 {
 	for(new v = 0; v < sizeof(SWEEPER); v++)
@@ -11824,7 +12165,38 @@ IsSWEEPERCAR(carid)
 	}
 	return 0;
 }
-
+IsUTILITYCAR(carid)
+{
+	for(new v = 0; v < sizeof(UTILITY); v++)
+	{
+		if(carid == UTILITY[v]) return 1;
+	}
+	return 0;
+}
+IsWHOPEECAR(carid)
+{
+	for(new v = 0; v < sizeof(WHOPEE); v++)
+	{
+		if(carid == WHOPEE[v]) return 1;
+	}
+	return 0;
+}
+IsBUSCAR(carid)
+{
+	for(new v = 0; v < sizeof(BUS); v++)
+	{
+		if(carid == BUS[v]) return 1;
+	}
+	return 0;
+}
+IsFORKLIFTCAR(carid)
+{
+	for(new v = 0; v < sizeof(FORKLIFT); v++)
+	{
+		if(carid == FORKLIFT[v]) return 1;
+	}
+	return 0;
+}
 IsAnIP(str[])
 {
 	if (!str[0] || str[0] == '\1')
@@ -13386,7 +13758,13 @@ CreateTextDraws(playerid) {
 	PlayerTextDrawSetProportional(playerid, PlayerData[playerid][pTextdraws][38], 1);
 	PlayerTextDrawSetSelectable(playerid, PlayerData[playerid][pTextdraws][38], 0);
 
-    PlayerData[playerid][pTextdraws][39] = CreatePlayerTextDraw(playerid, 327.000000, 424.000000, "~r~Footer text.");
+ 	PlayerData[playerid][pTextdraws][39] = CreatePlayerTextDraw(playerid, 320.0, 380.0, " ");
+	PlayerTextDrawAlignment(playerid, PlayerData[playerid][pTextdraws][39], 2);
+	PlayerTextDrawFont(playerid, PlayerData[playerid][pTextdraws][39], 1);
+	PlayerTextDrawLetterSize(playerid, PlayerData[playerid][pTextdraws][39], 0.320000, 1.700000);
+	PlayerTextDrawSetOutline(playerid, PlayerData[playerid][pTextdraws][39], 1);
+
+    /*PlayerData[playerid][pTextdraws][39] = CreatePlayerTextDraw(playerid, 327.000000, 424.000000, "~r~Footer text.");
 	PlayerTextDrawAlignment(playerid, PlayerData[playerid][pTextdraws][39], 2);
 	PlayerTextDrawBackgroundColor(playerid, PlayerData[playerid][pTextdraws][39], 255);
 	PlayerTextDrawFont(playerid, PlayerData[playerid][pTextdraws][39], 1);
@@ -13394,7 +13772,7 @@ CreateTextDraws(playerid) {
 	PlayerTextDrawColor(playerid, PlayerData[playerid][pTextdraws][39], -1);
 	PlayerTextDrawSetOutline(playerid, PlayerData[playerid][pTextdraws][39], 1);
 	PlayerTextDrawSetProportional(playerid, PlayerData[playerid][pTextdraws][39], 1);
-	PlayerTextDrawSetSelectable(playerid, PlayerData[playerid][pTextdraws][39], 0);
+	PlayerTextDrawSetSelectable(playerid, PlayerData[playerid][pTextdraws][39], 0);*/
 
 	PlayerData[playerid][pTextdraws][40] = CreatePlayerTextDraw(playerid, 470.000000, 160.000000, "_");
 	PlayerTextDrawBackgroundColor(playerid, PlayerData[playerid][pTextdraws][40], 255);
@@ -13923,7 +14301,8 @@ CreateTextDraws(playerid) {
 	PlayerTextDrawSetSelectable(playerid, PlayerData[playerid][pTextdraws][83], 0);
 }
 
-stock ShowPlayerFooter(playerid, string[], time = 5000) {
+stock ShowPlayerFooter(playerid, string[], time = 5000)
+{
 	if (PlayerData[playerid][pShowFooter]) {
 	    PlayerTextDrawHide(playerid, PlayerData[playerid][pTextdraws][39]);
 	    KillTimer(PlayerData[playerid][pFooterTimer]);
@@ -13945,6 +14324,12 @@ public HidePlayerFooter(playerid) {
 	return PlayerTextDrawHide(playerid, PlayerData[playerid][pTextdraws][39]);
 }
 
+forward HideNotif(playerid);
+public HideNotif(playerid)
+{
+	PlayerTextDrawHide(playerid, TWITTER[playerid]);
+	PlayerTextDrawHide(playerid, TWITTER_TEXT[playerid]);
+}
 ResetStatistics(playerid)
 {
 	for (new i = 0; i < 3; i ++) {
@@ -14013,6 +14398,7 @@ ResetStatistics(playerid)
     PlayerData[playerid][pRepairTime] = 0;
     PlayerData[playerid][pMoney] = 250;
     PlayerData[playerid][pBankMoney] = 250;
+    //PlayerData[playerid][pPayCheck] = 0;
     PlayerData[playerid][pSpawnPoint] = 0;
     PlayerData[playerid][pSavings] = 0;
     PlayerData[playerid][pAdmin] = 0;
@@ -14020,6 +14406,7 @@ ResetStatistics(playerid)
 	PlayerData[playerid][pReportTime] = 0;
 	PlayerData[playerid][pHelpTime] = 0;
 	PlayerData[playerid][pSweeperT] = 0;
+	PlayerData[playerid][pBusT] = 0;
 	PlayerData[playerid][pSpectator] = INVALID_PLAYER_ID;
 	PlayerData[playerid][pJailTime] = 0;
 	PlayerData[playerid][pKicked] = 0;
@@ -14140,6 +14527,7 @@ ResetStatistics(playerid)
 	PlayerData[playerid][pWaypointPos][2] = 0.0;
 	PlayerData[playerid][pFuelCan] = 0;
 	PlayerData[playerid][pDisableOOC] = 0;
+	PlayerData[playerid][pDisableTwt] = 0;
 	PlayerData[playerid][pDisablePM] = 0;
 	PlayerData[playerid][pDisableFaction] = 0;
 	PlayerData[playerid][pDisableHelper] = 0;
@@ -14203,6 +14591,7 @@ ResetStatistics(playerid)
     PlayerData[playerid][pAdminDuty] = 0;
     PlayerData[playerid][pSeekHelp] = 0;
     PlayerData[playerid][pMaskID] = random(90000) + 10000;
+    PlayerData[playerid][pTwitter] = 0;
     PlayerData[playerid][pMaskOn] = 0;
     PlayerData[playerid][pFactionMod] = 0;
     PlayerData[playerid][pSwatMember] = 0;
@@ -14944,7 +15333,8 @@ public OnQueryFinished(extraid, threadid)
 
 					cache_get_field_content(0, "Birthdate", PlayerData[extraid][pBirthdate], g_iHandle, 24);
 			        cache_get_field_content(0, "Origin", PlayerData[extraid][pOrigin], g_iHandle, 32);
-
+                    cache_get_field_content(0, "TWstatus", PlayerData[extraid][pStatusTW
+					], g_iHandle, 24);
 			        PlayerData[extraid][pSkin] = cache_get_field_int(0, "Skin");
 			        PlayerData[extraid][pPos][0] = cache_get_field_float(0, "PosX");
 			        PlayerData[extraid][pPos][1] = cache_get_field_float(0, "PosY");
@@ -14957,12 +15347,15 @@ public OnQueryFinished(extraid, threadid)
                     PlayerData[extraid][pHospitalInt] = cache_get_field_int(0, "HospitalInt");
 			        PlayerData[extraid][pMoney] = cache_get_field_int(0, "Money");
 			        PlayerData[extraid][pBankMoney] = cache_get_field_int(0, "BankMoney");
+			        PlayerData[extraid][pPayCheck] = cache_get_field_int(0, "PlayerSalary");
+			        PlayerData[extraid][pTwitter] = cache_get_field_int(0, "HaveTwitter");
 			        PlayerData[extraid][pOwnsBillboard] = cache_get_field_int(0, "OwnsBillboard");
 					PlayerData[extraid][pSavings] = cache_get_field_int(0, "Savings");
 			        PlayerData[extraid][pAdmin] = cache_get_field_int(0, "Admin");
 			        PlayerData[extraid][pJailTime] = cache_get_field_int(0, "JailTime");
 			        PlayerData[extraid][pMuted] = cache_get_field_int(0, "Muted");
 			        PlayerData[extraid][pSweeperT] = cache_get_field_int(0, "SwDelay");
+			        PlayerData[extraid][pBusT] = cache_get_field_int(0, "BusDelay");
 			        PlayerData[extraid][pHelper] = cache_get_field_int(0, "Helper");
 			        PlayerData[extraid][pHouse] = cache_get_field_int(0, "House");
 			        PlayerData[extraid][pBusiness] = cache_get_field_int(0, "Business");
@@ -16010,12 +16403,12 @@ public MinuteCheck()
 
         if (PlayerData[i][pMinutes] >= 60)
        	{
-       	    new paycheck = random(100) + 100;
+       	    new paycheck = PlayerData[i][pPayCheck];
 
         	PlayerData[i][pMinutes] = 0;
-
 			PlayerData[i][pPlayingHours]++;
 			PlayerData[i][pBankMoney] += paycheck;
+			PlayerData[i][pPayCheck] = 0;
 
 			if(PlayerData[i][pOwnsBillboard] >= 0)
 			{
@@ -16361,6 +16754,17 @@ public PlayerCheck()
 		    if (!PlayerData[i][pSweeperT])
 		    {
 				PlayerData[i][pSweeperT] = 0;
+				SendServerMessage(i, "Kamu sudah bisa bekerja sebagai {FFFF00}Street Sweeper {FFFFFF}Kembali!");
+		    }
+		}
+		else if (PlayerData[i][pBusT] && PlayerData[i][pBusT] > 0)
+		{
+		    PlayerData[i][pBusT]--;
+
+		    if (!PlayerData[i][pBusT])
+		    {
+				PlayerData[i][pBusT] = 0;
+				SendServerMessage(i, "Kamu sudah bisa bekerja sebagai {FFFF00}Bus Driver {FFFFFF}Kembali!");
 		    }
 		}
 		else if (PlayerData[i][pGraffiti] != -1 && PlayerData[i][pGraffitiTime] > 0)
@@ -16930,7 +17334,7 @@ public OnPlayerUseItem(playerid, itemid, name[])
         cmd_usekit(playerid, "\1");
     }
     else if (!strcmp(name, "Cellphone", true)) {
-        cmd_phone(playerid, "\1");
+        cmd_phonezzzz(playerid, "\1");
     }
     else if (!strcmp(name, "Portable Radio", true)) {
         SendSyntaxMessage(playerid, "Use \"/pr [text]\" to chat with your radio.");
@@ -17142,8 +17546,33 @@ public OnPlayerWeaponShot(playerid, weaponid, hittype, hitid, Float:fX, Float:fY
 	return 1;
 }
 
-public OnPlayerTakeDamage(playerid, issuerid, Float:amount, weaponid)
+public OnPlayerTakeDamage(playerid, issuerid, Float:amount, weaponid, bodypart)
 {
+    if(IsPlayerConnected(playerid))
+    {
+        new
+            Float: pHP,
+            Float: pArm,
+            id;
+
+        GetPlayerHealth(playerid, pHP);
+        GetPlayerArmour(playerid, pArm);
+        for(new i = 0; i < MAX_DAMAGES; i++)
+        {
+            if(!DamageInfo[playerid][i][dmgDamage])
+            {
+                id = i;
+                break;
+            }
+        }
+
+        DamageInfo[playerid][id][dmgDamage] = floatround(amount, floatround_round);
+        DamageInfo[playerid][id][dmgWeapon] = weaponid;
+        DamageInfo[playerid][id][dmgBodypart] = bodypart;
+        if(pArm > 0) DamageInfo[playerid][id][dmgKevlarhit] = 1;
+        else if(pArm < 1) DamageInfo[playerid][id][dmgKevlarhit] = 0;
+        DamageInfo[playerid][id][dmgSeconds] = gettime();
+    }
 	if (PlayerData[playerid][pFirstAid])
 	{
 	    SendClientMessage(playerid, COLOR_LIGHTRED, "[WARNING]:{FFFFFF} Your first aid kit is no longer in effect as you took damage.");
@@ -17220,7 +17649,6 @@ public OnPlayerGiveDamage(playerid, damagedid, Float:amount, weaponid)
 
 public OnPlayerDeath(playerid, killerid, reason)
 {
-
 	if (killerid != INVALID_PLAYER_ID)
 	{
 	    if (1 <= reason <= 46)
@@ -17265,11 +17693,45 @@ public OnPlayerDeath(playerid, killerid, reason)
 	{
 	    InRaindance[playerid] = 0;
 	}
+	foreach (new i : Player)
+	{
+		if(PlayerData[i][pAdmin] >= 1)
+	    {
+	    	SendDeathMessageToPlayer(i, killerid, playerid, reason);
+	    }
+	}
 	return 1;
 }
 
 public OnPlayerKeyStateChange(playerid, newkeys, oldkeys)
 {
+	if(takingselfie[playerid] == 1)
+	{
+		if(PRESSED(KEY_ANALOG_RIGHT))
+		{
+			GetPlayerPos(playerid,lX[playerid],lY[playerid],lZ[playerid]);
+			static Float: n1X, Float: n1Y;
+		    if(Degree[playerid] >= 360) Degree[playerid] = 0;
+		    Degree[playerid] += Speed;
+		    n1X = lX[playerid] + Radius * floatcos(Degree[playerid], degrees);
+		    n1Y = lY[playerid] + Radius * floatsin(Degree[playerid], degrees);
+		    SetPlayerCameraPos(playerid, n1X, n1Y, lZ[playerid] + Height);
+		    SetPlayerCameraLookAt(playerid, lX[playerid], lY[playerid], lZ[playerid]+1);
+		    SetPlayerFacingAngle(playerid, Degree[playerid] - 90.0);
+		}
+		if(PRESSED(KEY_ANALOG_LEFT))
+		{
+		    GetPlayerPos(playerid,lX[playerid],lY[playerid],lZ[playerid]);
+			static Float: n1X, Float: n1Y;
+		    if(Degree[playerid] >= 360) Degree[playerid] = 0;
+		    Degree[playerid] -= Speed;
+		    n1X = lX[playerid] + Radius * floatcos(Degree[playerid], degrees);
+		    n1Y = lY[playerid] + Radius * floatsin(Degree[playerid], degrees);
+		    SetPlayerCameraPos(playerid, n1X, n1Y, lZ[playerid] + Height);
+		    SetPlayerCameraLookAt(playerid, lX[playerid], lY[playerid], lZ[playerid]+1);
+		    SetPlayerFacingAngle(playerid, Degree[playerid] - 90.0);
+		}
+	}
 	if (PlayerData[playerid][pTutorial] || PlayerData[playerid][pHospital] != -1 || !IsPlayerSpawned(playerid) || PlayerData[playerid][pCuffed] || PlayerData[playerid][pInjured])
 	    return 0;
 
@@ -17289,6 +17751,15 @@ public OnPlayerKeyStateChange(playerid, newkeys, oldkeys)
 	}
 	if (newkeys & KEY_YES && IsPlayerSpawned(playerid))
 	{
+		PlayerTextDrawShow(playerid, MENU[playerid]);
+		PlayerTextDrawShow(playerid, MENU_X[playerid]);
+		PlayerTextDrawShow(playerid, MENU_STATS[playerid]);
+		PlayerTextDrawShow(playerid, MENU_INVEN[playerid]);
+		PlayerTextDrawShow(playerid, MENU_PHONE[playerid]);
+		SelectTextDraw(playerid, COLOR_WHITE);
+	}
+	/*if (newkeys & KEY_YES && IsPlayerSpawned(playerid))
+	{
 	    if (PlayerData[playerid][pJailTime] > 0)
 			return SendErrorMessage(playerid, "You can't open your inventory whilst jailed.");
 
@@ -17296,7 +17767,7 @@ public OnPlayerKeyStateChange(playerid, newkeys, oldkeys)
 		    return SendErrorMessage(playerid, "You can't open your inventory at the moment.");
 
 		OpenInventory(playerid);
-	}
+	}*/
 	if (newkeys & KEY_LOOK_BEHIND && IsPlayerInAnyVehicle(playerid))
 	{
 		cmd_engine(playerid, "\1");
@@ -18082,6 +18553,7 @@ public OnPlayerExitVehicle(playerid, vehicleid)
 
 		CoreVehicles[vehicleid][vehCrate] = INVALID_OBJECT_ID;
 		DisablePlayerCheckpoint(playerid);
+		SetVehicleToRespawn(GetPlayerVehicleID(playerid));
 	    }
 	return 1;
 }
@@ -18116,7 +18588,327 @@ public OnPlayerEnterVehicle(playerid, vehicleid, ispassenger)
 	}
 	return 1;
 }
-
+public OnPlayerEnterRaceCheckpoint(playerid)
+{
+	new Float:Health;
+    if(OnBus[playerid] == 1)
+	{
+		GetVehicleHealth(GetPlayerVehicleID(playerid), Health);
+		if(Health > 600)
+		{
+			DisablePlayerRaceCheckpoint(playerid);
+			OnBus[playerid] = 2;
+			SetPlayerRaceCheckpoint(playerid, 0, -235.7787,-275.9762,0.7137,-84.8779,-199.1279,1.3644,5);
+		}
+		if(Health < 600)
+		{
+			DisablePlayerRaceCheckpoint(playerid);
+			OnBus[playerid] = 0;
+			SetVehicleToRespawn(GetPlayerVehicleID(playerid));
+			SendClientMessage(playerid, COLOR_LIGHTBLUE, "SIDEJOB : {FFFFFF}Kamu gagal bekerja {FFFF00}Bus Driver {FFFFFF}Karena terlalu sering menabrak!");
+		}
+		return 1;
+	}
+	else if(OnBus[playerid] == 2)
+	{
+		GetVehicleHealth(GetPlayerVehicleID(playerid), Health);
+		if(Health > 600)
+		{
+			DisablePlayerRaceCheckpoint(playerid);
+			OnBus[playerid] = 3;
+			SetPlayerRaceCheckpoint(playerid, 0, -84.8779,-199.1279,1.3644,201.9898,-215.3165,1.0681,5);
+		}
+		if(Health < 600)
+		{
+			DisablePlayerRaceCheckpoint(playerid);
+			OnBus[playerid] = 0;
+			SetVehicleToRespawn(GetPlayerVehicleID(playerid));
+			SendClientMessage(playerid, COLOR_LIGHTBLUE, "SIDEJOB : {FFFFFF}Kamu gagal bekerja {FFFF00}Bus Driver {FFFFFF}Karena terlalu sering menabrak!");
+		}
+		return 1;
+	}
+	else if(OnBus[playerid] == 3)
+	{
+		GetVehicleHealth(GetPlayerVehicleID(playerid), Health);
+		if(Health > 600)
+		{
+		    DisablePlayerRaceCheckpoint(playerid);
+		    OnBus[playerid] = 4;
+			SetPlayerRaceCheckpoint(playerid, 0, 201.9898,-215.3165,1.0681,229.2015,-265.6811,1.0653,5);
+		}
+		if(Health < 600)
+		{
+			DisablePlayerRaceCheckpoint(playerid);
+			OnBus[playerid] = 0;
+			SetVehicleToRespawn(GetPlayerVehicleID(playerid));
+			SendClientMessage(playerid, COLOR_LIGHTBLUE, "SIDEJOB : {FFFFFF}Kamu gagal bekerja {FFFF00}Bus Driver {FFFFFF}Karena terlalu sering menabrak!");
+		}
+		return 1;
+	}
+	else if(OnBus[playerid] == 4)
+	{
+		GetVehicleHealth(GetPlayerVehicleID(playerid), Health);
+		if(Health >= 600)
+		{
+		    DisablePlayerRaceCheckpoint(playerid);
+		    OnBus[playerid] = 5;
+			SetPlayerRaceCheckpoint(playerid, 0, 229.2015,-265.6811,1.0653,273.4600,-379.3793,8.4319,5);
+		}
+		if(Health < 600)
+		{
+			DisablePlayerRaceCheckpoint(playerid);
+			OnBus[playerid] = 0;
+			SetVehicleToRespawn(GetPlayerVehicleID(playerid));
+			SendClientMessage(playerid, COLOR_LIGHTBLUE, "SIDEJOB : {FFFFFF}Kamu gagal bekerja {FFFF00}Bus Driver {FFFFFF}Karena terlalu sering menabrak!");
+		}
+		return 1;
+	}
+	else if(OnBus[playerid] == 5)
+	{
+		GetVehicleHealth(GetPlayerVehicleID(playerid), Health);
+		if(Health > 600)
+		{
+		    DisablePlayerRaceCheckpoint(playerid);
+		    OnBus[playerid] = 6;
+			SetPlayerRaceCheckpoint(playerid, 0, 273.4600,-379.3793,8.4319,576.9855,-417.3384,25.5898,5);
+		}
+		if(Health < 600)
+		{
+			DisablePlayerRaceCheckpoint(playerid);
+			OnBus[playerid] = 0;
+			SetVehicleToRespawn(GetPlayerVehicleID(playerid));
+			SendClientMessage(playerid, COLOR_LIGHTBLUE, "SIDEJOB : {FFFFFF}Kamu gagal bekerja {FFFF00}Bus Driver {FFFFFF}Karena terlalu sering menabrak!");
+		}
+		return 1;
+	}
+	else if(OnBus[playerid] == 6)
+	{
+		GetVehicleHealth(GetPlayerVehicleID(playerid), Health);
+		if(Health > 600)
+		{
+		    DisablePlayerRaceCheckpoint(playerid);
+		    OnBus[playerid] = 7;
+			SetPlayerRaceCheckpoint(playerid, 0, 576.9855,-417.3384,25.5898,576.9855,-417.3384,25.5898,5);
+		}
+		if(Health < 600)
+		{
+			DisablePlayerRaceCheckpoint(playerid);
+			OnBus[playerid] = 0;
+			SetVehicleToRespawn(GetPlayerVehicleID(playerid));
+			SendClientMessage(playerid, COLOR_LIGHTBLUE, "SIDEJOB : {FFFFFF}Kamu gagal bekerja {FFFF00}Bus Driver {FFFFFF}Karena terlalu sering menabrak!");
+		}
+		return 1;
+	}
+	else if(OnBus[playerid] == 7)
+	{
+		GetVehicleHealth(GetPlayerVehicleID(playerid), Health);
+		if(Health > 600)
+		{
+		    DisablePlayerRaceCheckpoint(playerid);
+		    OnBus[playerid] = 9;
+			SetPlayerRaceCheckpoint(playerid, 0, 576.9855,-417.3384,25.5898,811.3817,-532.9692,15.8231,5);
+		}
+		if(Health < 600)
+		{
+			DisablePlayerRaceCheckpoint(playerid);
+			OnBus[playerid] = 0;
+			SetVehicleToRespawn(GetPlayerVehicleID(playerid));
+			SendClientMessage(playerid, COLOR_LIGHTBLUE, "SIDEJOB : {FFFFFF}Kamu gagal bekerja {FFFF00}Bus Driver {FFFFFF}Karena terlalu sering menabrak!");
+		}
+		return 1;
+	}
+	else if(OnBus[playerid] == 9)
+	{
+		GetVehicleHealth(GetPlayerVehicleID(playerid), Health);
+		if(Health > 600)
+		{
+		    DisablePlayerRaceCheckpoint(playerid);
+		    OnBus[playerid] = 10;
+			SetPlayerRaceCheckpoint(playerid, 0, 811.3817,-532.9692,15.8231,939.2799,-524.8941,36.2337,5);
+		}
+		if(Health < 600)
+		{
+			DisablePlayerRaceCheckpoint(playerid);
+			OnBus[playerid] = 0;
+			SetVehicleToRespawn(GetPlayerVehicleID(playerid));
+			SendClientMessage(playerid, COLOR_LIGHTBLUE, "SIDEJOB : {FFFFFF}Kamu gagal bekerja {FFFF00}Bus Driver {FFFFFF}Karena terlalu sering menabrak!");
+		}
+		return 1;
+	}
+	else if(OnBus[playerid] == 10)
+	{
+		GetVehicleHealth(GetPlayerVehicleID(playerid), Health);
+		if(Health > 600)
+		{
+		    DisablePlayerRaceCheckpoint(playerid);
+		    OnBus[playerid] = 11;
+			SetPlayerRaceCheckpoint(playerid, 0, 939.2799,-524.8941,36.2337,1289.9955,-379.2431,2.4995,5);
+		}
+		if(Health < 600)
+		{
+			DisablePlayerRaceCheckpoint(playerid);
+			OnBus[playerid] = 0;
+			SetVehicleToRespawn(GetPlayerVehicleID(playerid));
+			SendClientMessage(playerid, COLOR_LIGHTBLUE, "SIDEJOB : {FFFFFF}Kamu gagal bekerja {FFFF00}Bus Driver {FFFFFF}Karena terlalu sering menabrak!");
+		}
+		return 1;
+	}
+	else if(OnBus[playerid] == 11)
+	{
+		GetVehicleHealth(GetPlayerVehicleID(playerid), Health);
+		if(Health > 600)
+		{
+		    DisablePlayerRaceCheckpoint(playerid);
+		    OnBus[playerid] = 12;
+			SetPlayerRaceCheckpoint(playerid, 0, 1289.9955,-379.2431,2.4995,1862.7843,-238.8468,39.6729,5);
+		}
+		if(Health < 600)
+		{
+			DisablePlayerRaceCheckpoint(playerid);
+			OnBus[playerid] = 0;
+			SetVehicleToRespawn(GetPlayerVehicleID(playerid));
+			SendClientMessage(playerid, COLOR_LIGHTBLUE, "SIDEJOB : {FFFFFF}Kamu gagal bekerja {FFFF00}Bus Driver {FFFFFF}Karena terlalu sering menabrak!");
+		}
+		return 1;
+	}
+	else if(OnBus[playerid] == 12)
+	{
+		GetVehicleHealth(GetPlayerVehicleID(playerid), Health);
+		if(Health > 600)
+		{
+		    DisablePlayerRaceCheckpoint(playerid);
+		    OnBus[playerid] = 13;
+			SetPlayerRaceCheckpoint(playerid, 0, 1862.7843,-238.8468,39.6729,1655.6498,133.7863,30.2784,5);
+		}
+		if(Health < 600)
+		{
+			DisablePlayerRaceCheckpoint(playerid);
+			OnBus[playerid] = 0;
+			SetVehicleToRespawn(GetPlayerVehicleID(playerid));
+			SendClientMessage(playerid, COLOR_LIGHTBLUE, "SIDEJOB : {FFFFFF}Kamu gagal bekerja {FFFF00}Bus Driver {FFFFFF}Karena terlalu sering menabrak!");
+		}
+		return 1;
+	}
+	else if(OnBus[playerid] == 13)
+	{
+		GetVehicleHealth(GetPlayerVehicleID(playerid), Health);
+		if(Health > 600)
+		{
+		    DisablePlayerRaceCheckpoint(playerid);
+		    OnBus[playerid] = 14;
+			SetPlayerRaceCheckpoint(playerid, 0, 1655.6498,133.7863,30.2784,1209.6954,-144.6237,39.5624,5);
+		}
+		if(Health < 600)
+		{
+			DisablePlayerRaceCheckpoint(playerid);
+			OnBus[playerid] = 0;
+			SetVehicleToRespawn(GetPlayerVehicleID(playerid));
+			SendClientMessage(playerid, COLOR_LIGHTBLUE, "SIDEJOB : {FFFFFF}Kamu gagal bekerja {FFFF00}Bus Driver {FFFFFF}Karena terlalu sering menabrak!");
+		}
+		return 1;
+	}
+	else if(OnBus[playerid] == 14)
+	{
+		GetVehicleHealth(GetPlayerVehicleID(playerid), Health);
+		if(Health > 600)
+		{
+		    DisablePlayerRaceCheckpoint(playerid);
+		    OnBus[playerid] = 15;
+			SetPlayerRaceCheckpoint(playerid, 1, 1209.6954,-144.6237,39.5624,527.2579,-137.9484,37.4676,5);//lasttt
+		}
+		if(Health < 600)
+		{
+			DisablePlayerRaceCheckpoint(playerid);
+			OnBus[playerid] = 0;
+			SetVehicleToRespawn(GetPlayerVehicleID(playerid));
+			SendClientMessage(playerid, COLOR_LIGHTBLUE, "SIDEJOB : {FFFFFF}Kamu gagal bekerja {FFFF00}Bus Driver {FFFFFF}Karena terlalu sering menabrak!");
+		}
+		return 1;
+	}
+	else if(OnBus[playerid] == 15)
+	{
+		GetVehicleHealth(GetPlayerVehicleID(playerid), Health);
+		if(Health > 600)
+		{
+		    DisablePlayerRaceCheckpoint(playerid);
+		    OnBus[playerid] = 16;
+			SetPlayerRaceCheckpoint(playerid, 1, 527.2579,-137.9484,37.4676,298.5003,-140.3271,1.0668,5);
+		}
+		if(Health < 600)
+		{
+			DisablePlayerRaceCheckpoint(playerid);
+			OnBus[playerid] = 0;
+			SetVehicleToRespawn(GetPlayerVehicleID(playerid));
+			SendClientMessage(playerid, COLOR_LIGHTBLUE, "SIDEJOB : {FFFFFF}Kamu gagal bekerja {FFFF00}Bus Driver {FFFFFF}Karena terlalu sering menabrak!");
+		}
+		return 1;
+	}
+	else if(OnBus[playerid] == 16)
+	{
+		GetVehicleHealth(GetPlayerVehicleID(playerid), Health);
+		if(Health > 600)
+		{
+		    DisablePlayerRaceCheckpoint(playerid);
+		    OnBus[playerid] = 17;
+			SetPlayerRaceCheckpoint(playerid, 1, 298.5003,-140.3271,1.0668,-298.1932,-190.1024,0.7137,5);
+		}
+		if(Health < 600)
+		{
+			DisablePlayerRaceCheckpoint(playerid);
+			OnBus[playerid] = 0;
+			SetVehicleToRespawn(GetPlayerVehicleID(playerid));
+			SendClientMessage(playerid, COLOR_LIGHTBLUE, "SIDEJOB : {FFFFFF}Kamu gagal bekerja {FFFF00}Bus Driver {FFFFFF}Karena terlalu sering menabrak!");
+		}
+		return 1;
+	}
+	else if(OnBus[playerid] == 17)
+	{
+		GetVehicleHealth(GetPlayerVehicleID(playerid), Health);
+		if(Health > 600)
+		{
+		    DisablePlayerRaceCheckpoint(playerid);
+		    OnBus[playerid] = 18;
+			SetPlayerRaceCheckpoint(playerid, 1, -298.1932,-190.1024,0.7137,-103.4907,-371.1786,1.0652,5);
+		}
+		if(Health < 600)
+		{
+			DisablePlayerRaceCheckpoint(playerid);
+			OnBus[playerid] = 0;
+			SetVehicleToRespawn(GetPlayerVehicleID(playerid));
+			SendClientMessage(playerid, COLOR_LIGHTBLUE, "SIDEJOB : {FFFFFF}Kamu gagal bekerja {FFFF00}Bus Driver {FFFFFF}Karena terlalu sering menabrak!");
+		}
+		return 1;
+	}
+	else if(OnBus[playerid] == 18)
+	{
+		GetVehicleHealth(GetPlayerVehicleID(playerid), Health);
+		if(Health > 600)
+		{
+		    DisablePlayerRaceCheckpoint(playerid);
+		    OnBus[playerid] = 19;
+			SetPlayerRaceCheckpoint(playerid, 1, -103.4907,-371.1786,1.0652,-5.2129,-302.8605,5.0621,5);
+		}
+		if(Health < 600)
+		{
+			DisablePlayerRaceCheckpoint(playerid);
+			OnBus[playerid] = 0;
+			SetVehicleToRespawn(GetPlayerVehicleID(playerid));
+			SendClientMessage(playerid, COLOR_LIGHTBLUE, "SIDEJOB : {FFFFFF}Kamu gagal bekerja {FFFF00}Bus Driver {FFFFFF}Karena terlalu sering menabrak!");
+		}
+		return 1;
+	}
+	else if(OnBus[playerid] == 19)
+	{
+	    SendClientMessageEx(playerid, COLOR_YELLOW, "SIDEJOB  {FFFFFF}Kamu berhasil menyelesaikan pekerjaan!");
+		SendClientMessageEx(playerid, COLOR_YELLOW, "SIDEJOB  {FFFFFF}Kamu menerima {00FF00}$50 {FFFFFF}di saku dan {00FF00}$150 {FFFFFF}di Salary!");
+        PlayerData[playerid][pBusT] = 900;
+        PlayerData[playerid][pPayCheck] += 150;
+        DisablePlayerRaceCheckpoint(playerid);
+        SetVehicleToRespawn(GetPlayerVehicleID(playerid));
+		return 1;
+	}
+	return 1;
+}
 public OnPlayerEnterCheckpoint(playerid)
 {
 	new Float:Health;
@@ -18269,8 +19061,11 @@ public OnPlayerEnterCheckpoint(playerid)
 		DisablePlayerCheckpoint(playerid);
 		OnSweeping[playerid] = 0;
 		GiveMoney(playerid, 100);
-		SendClientMessage(playerid, COLOR_BLUE, "SIDEJOB: {FFFFFF}You have Finished your Job and earn {00FF00}$100");
+		PlayerData[playerid][pPayCheck] += 70;
+		SendClientMessage(playerid, COLOR_YELLOW, "SIDEJOB: {FFFFFF}Kamu berhasil menyelesaikan pekerjaan!");
+		SendClientMessage(playerid, COLOR_YELLOW, "SIDEJOB: {FFFFFF}Kamu menerima {00FF00}$30 {FFFFFF}di saku dan {00FF00}$70 {FFFFFF}di Salary.");
 		SetVehicleToRespawn(GetPlayerVehicleID(playerid));
+		PlayerData[playerid][pSweeperT] = 600;
 		return 1;
 	}
 	if (PlayerData[playerid][pTutorialStage])
@@ -18291,12 +19086,11 @@ public OnPlayerEnterCheckpoint(playerid)
   			SendErrorMessage(playerid, "You're not in a delivery vehicle.");
   		}
 	    new string[180];
-        format(string, sizeof(string), "You have earned $%d from the courier mission!", TruckingCheck[playerid]);
+        format(string, sizeof(string), "Kamu mendapatkan $%d dari me Restock Produk!", TruckingCheck[playerid]);
         GiveMoney(playerid, TruckingCheck[playerid]);
         TruckingCheck[playerid] = 0;
 		SendClientMessageEx(playerid, COLOR_LIGHTYELLOW, string);
 		DisablePlayerCheckpoint(playerid);
-		RespawnVehicle(vehicleid);
 	}
 	if (PlayerData[playerid][pCP])
 	{
@@ -18406,7 +19200,7 @@ public OnPlayerEnterCheckpoint(playerid)
 					SetPlayerSpecialAction(playerid, SPECIAL_ACTION_CARRY);
 
 					SetPlayerCheckpoint(playerid, BusinessData[PlayerData[playerid][pUnloading]][bizPos][0], BusinessData[PlayerData[playerid][pUnloading]][bizPos][1], BusinessData[PlayerData[playerid][pUnloading]][bizPos][2], 1.0);
-					ShowPlayerFooter(playerid, "Deliver the crate to the ~r~checkpoint.");
+					ShowPlayerFooter(playerid, "Deliver the Cargo to the ~r~checkpoint.");
 
 					CoreVehicles[PlayerData[playerid][pUnloadVehicle]][vehLoads]--;
 				}
@@ -18430,37 +19224,37 @@ public OnPlayerEnterCheckpoint(playerid)
 						{
 							TruckingCheck[playerid] += 35;
 					        //GiveMoney(playerid, 35);
-					        ShowPlayerFooter(playerid, "~g~$35~w~ has been added to your check.");
+					        ShowPlayerFooter(playerid, "~w~You're earn ~g~$35");
 					    }
 					    case 2:
 						{
 						    TruckingCheck[playerid] += 40;
 					        //GiveMoney(playerid, 40);
-					        ShowPlayerFooter(playerid, "~g~$40~w~ has been added to your check.");
+					        ShowPlayerFooter(playerid, "~w~You're earn ~g~$40");
 					    }
 					    case 3:
 						{
-						    TruckingCheck[playerid] += 30;
-					        //GiveMoney(playerid, 30);
-					        ShowPlayerFooter(playerid, "~g~$30~w~ has been added to your check.");
+                            TruckingCheck[playerid] += 30;
+						  //  GiveMoney(playerid, 30);
+					        ShowPlayerFooter(playerid, "~w~You're earn ~g~$30");
 					    }
 					    case 4:
 						{
 						    TruckingCheck[playerid] += 35;
-					        //GiveMoney(playerid, 35);
-					        ShowPlayerFooter(playerid, "~g~$35~w~ has been added to your check.");
+					      //  GiveMoney(playerid, 35);
+					        ShowPlayerFooter(playerid, "~w~You're earn ~g~$35");
 					    }
 					    case 5:
 						{
 						    TruckingCheck[playerid] += 40;
-					        //GiveMoney(playerid, 40);
-					        ShowPlayerFooter(playerid, "~g~$40~w~ has been added to your check.");
+					       // GiveMoney(playerid, 40);
+					        ShowPlayerFooter(playerid, "~w~You're earn ~g~$40");
 					    }
 					    case 6:
 						{
 						    TruckingCheck[playerid] += 35;
-					        //GiveMoney(playerid, 35);
-					        ShowPlayerFooter(playerid, "~g~$35~w~ has been added to your check.");
+					       // GiveMoney(playerid, 35);
+					        ShowPlayerFooter(playerid, "~w~You're earn ~g~$35");
 					    }
 					}
 
@@ -18496,7 +19290,7 @@ public OnPlayerEnterCheckpoint(playerid)
 						DisablePlayerCheckpoint(playerid);
 					    SendServerMessage(playerid, "{FFFFFF}You have delivered all the crates from the vehicle.");
 					    SendServerMessage(playerid, "{FFFFFF}Deliver your truck to the checkpoint to get paid.");
-					    SetPlayerCheckpoint(playerid, 2521.0376, -2090.3279, 13.4125, 5.0);
+					    SetPlayerCheckpoint(playerid, 820.0089,-609.8404,16.3432, 5.0);
 
 					    if (PlayerData[playerid][pShipment] != -1)
 					    {
@@ -18530,7 +19324,7 @@ public OnPlayerEnterCheckpoint(playerid)
 			SetPlayerAttachedObject(playerid, 4, 18634, 6, 0.156547, 0.039423, 0.026570, 198.109115, 6.364907, 262.997558, 1.000000, 1.000000, 1.000000);
 			SetPlayerSpecialAction(playerid, SPECIAL_ACTION_NONE);
 		}
-	    else if (PlayerData[playerid][pJob] == JOB_UNLOADER && IsPlayerInWarehouse(playerid) && GetVehicleModel(vehicleid) == 530 && CoreVehicles[vehicleid][vehLoadType] == 7)
+	    else if (PlayerData[playerid][pJob] == JOB_UNLOADER && GetVehicleModel(vehicleid) == 530 && CoreVehicles[vehicleid][vehLoadType] == 7)
 	    {
 	        GetVehicleHealth(vehicleid, health);
 
@@ -18568,6 +19362,7 @@ public OnPlayerEnterCheckpoint(playerid)
                 SetPlayerAttachedObject(playerid, 4, 1220, 5, 0.137832, 0.176979, 0.151424, 96.305931, 185.363006, 20.328088, 0.699999, 0.800000, 0.699999);
 				SetPlayerSpecialAction(playerid, SPECIAL_ACTION_CARRY);
 
+				PlayerData[playerid][pThirst] -= 2;
 				ApplyAnimation(playerid, "CARRY", "liftup", 4.1, 0, 0, 0, 0, 0, 1);
 				SetPlayerCheckpoint(playerid, JobData[PlayerData[playerid][pSorting]][jobDeliver][0], JobData[PlayerData[playerid][pSorting]][jobDeliver][1], JobData[PlayerData[playerid][pSorting]][jobDeliver][2], 1.0);
 
@@ -18861,8 +19656,63 @@ public OnPlayerStateChange(playerid, newstate, oldstate)
 		}
 		else
 		{
-		    format(String, sizeof(String),"ERROR: You must wait for %d for Working again.", PlayerData[playerid][pSweeperT]/60);
+		    format(String, sizeof(String),"ERROR: You must wait for %d minute for Working again.", PlayerData[playerid][pSweeperT]/60);
 		    SendClientMessage(playerid, COLOR_GREY, String);
+			RemovePlayerFromVehicle(playerid);
+	 	}
+	}
+	else if(IsBUSCAR(vehicleid))
+	{
+	    new String[512];
+	    if(PlayerData[playerid][pBusT] == 0)
+		{
+			ShowPlayerDialog(playerid, DIALOG_BUS, DIALOG_STYLE_MSGBOX, "{FFFFFF}Bus Sidejob", "{FFFFFF}Continue for Working","Continue", "Cancel");
+		}
+		else
+		{
+		    format(String, sizeof(String),"ERROR: You must wait for %d minute for Working again.", PlayerData[playerid][pBusT]/60);
+		    SendClientMessage(playerid, COLOR_GREY, String);
+			RemovePlayerFromVehicle(playerid);
+	 	}
+	}
+	else if(IsFORKLIFTCAR(vehicleid))
+	{
+	    if(PlayerData[playerid][pJob] == JOB_UNLOADER)
+		{
+			SendClientMessage(playerid, COLOR_YELLOW, "JOB: {FFFFFF}Kamu adalah pekerja Cargo Unloader");
+			SendClientMessage(playerid, COLOR_YELLOW, "JOB: {FFFFFF}Kamu diperkenankan menggunakan kendaraan ini.");
+			SendClientMessage(playerid, COLOR_YELLOW, "NOTE: {FFFFFF}Dilarang {FF0000}Abuse {FFFFFF}Kendaraan Job jika tidak ingin terkena {FF0000}Punish!");
+		}
+		else
+		{
+		    SendClientMessage(playerid, COLOR_YELLOW, "JOB: {FFFFFF}Kamu bukan perkerja Cargo Unloader!");
+			RemovePlayerFromVehicle(playerid);
+	 	}
+	}
+	else if(IsWHOPEECAR(vehicleid))
+	{
+	    if(PlayerData[playerid][pJob] == JOB_FOOD_VENDOR)
+		{
+			SendClientMessage(playerid, COLOR_YELLOW, "JOB: {FFFFFF}Kamu adalah pekerja Food Vendor");
+			SendClientMessage(playerid, COLOR_YELLOW, "JOB: {FFFFFF}Jualah makanan kepada Player lain dengan {FFFF00}'/sellfood'");
+			SendClientMessage(playerid, COLOR_YELLOW, "NOTE: {FFFFFF}Dilarang {FF0000}Abuse {FFFFFF}Kendaraan Job jika tidak ingin terkena {FF0000}Punish!");
+		}
+		else
+		{
+		    SendClientMessage(playerid, COLOR_YELLOW, "JOB: {FFFFFF}Kamu bukan perkerja Food Vendor!");
+			RemovePlayerFromVehicle(playerid);
+	 	}
+	}
+	else if(IsUTILITYCAR(vehicleid))
+	{
+	    if(PlayerData[playerid][pJob] == JOB_FOOD_VENDOR)
+		{
+			SendClientMessage(playerid, COLOR_YELLOW, "JOB: {FFFFFF}Kamu adalah pekerja Garbage Man");
+			SendClientMessage(playerid, COLOR_YELLOW, "NOTE: {FFFFFF}Dilarang {FF0000}Abuse {FFFFFF}Kendaraan Job jika tidak ingin terkena {FF0000}Punish!");
+		}
+		else
+		{
+		    SendClientMessage(playerid, COLOR_YELLOW, "JOB: {FFFFFF}Kamu bukan perkerja Garbage Man!");
 			RemovePlayerFromVehicle(playerid);
 	 	}
 	}
@@ -19074,6 +19924,7 @@ public OnPlayerUpdate(playerid)
 
 public OnPlayerConnect(playerid)
 {
+    ResetPlayerDamages(playerid);
 	CountingPlayer++;
 	if (IsPlayerNPC(playerid))
 	    return 1;
@@ -19090,8 +19941,6 @@ public OnPlayerConnect(playerid)
 	ResetPlayerWeapons(playerid);
 	SetPlayerArmedWeapon(playerid, 0);
 
-	//SetPlayerFightingStyle(playerid, PlayerData[playerid][pFightStyle]);
-	
 	PreloadAnimations(playerid);
 
 	if (g_ServerRestart) {
@@ -19100,11 +19949,39 @@ public OnPlayerConnect(playerid)
 	for (new i = 0; i != MAX_PLAYER_ATTACHED_OBJECTS; i ++) {
 	    RemovePlayerAttachedObject(playerid, i);
 	}
+	// Variable for geolocation
+    new PlayerIP[16], country[MAX_COUNTRY_LENGTH], city[MAX_CITY_LENGTH];
+	// Get Player Name & Country
+	GetPlayerName(playerid, PlayerData[playerid][pRoleplayName], MAX_PLAYER_NAME);
+	GetPlayerIp(playerid, PlayerIP, sizeof(PlayerIP));
+	PlayerData[playerid][pIP] = PlayerIP;
+	GetPlayerCountry(playerid, country, MAX_COUNTRY_LENGTH);
+	GetPlayerCity(playerid, city, MAX_CITY_LENGTH);
+	// Get Roleplay Name
+	//strcpy(PlayerData[playerid][pRoleplayName], "%s", ReturnName(playerid));
+	// Login Message
+	if (!PlayerData[playerid][pDisableLogin])
+	{
+		new string[244];
+		format(string, sizeof(string), "{FFFFFF}* {FF0000}%s {FFFFFF}is now login to the server. (%s, %s)", ReturnName(playerid,0), city, country);
+		SendClientMessageToAll(COLOR_WHITE, string);
+	}
+	new string[245];
+	format(string, sizeof(string), "{ADDBE6}SERVER: {FFFFFF}Selamat datang, {FFFF00}%s.", ReturnName(playerid, 0));
+	SendClientMessageEx(playerid, COLOR_WHITE, string);
+	SendClientMessage(playerid, COLOR_WHITE, "{00F8FC}MOTD: {FFFF00}/changelog {FFFFFF}untuk melihat update server.");
+//	PlayerData[playerid][pRoleplayName] = ReturnName(playerid, 0);
+	// Admin MOTD
+    if(PlayerData[playerid][pAdmin] > 1)
+    {
+    	SendClientMessage(playerid, COLOR_WHITE, "{FF0000}ADMIN MOTD: {FFFF00}Kalau ada yang bug tolong langsung dilapor ya.");
+    }
 
 	// Map Icon
 	SetPlayerMapIcon(playerid, 56, 319.9365, 874.5947, 20.3990, 56, 0, MAPICON_LOCAL); // Miner Job
 	
 	// Fishing System ( 0 = Not Set while Player Connect )
+	takingselfie[playerid] = 0;
     Fishing[playerid] = 0;
     HasBait[playerid] = 0;
     HasRod[playerid] = 0;
@@ -19115,7 +19992,215 @@ public OnPlayerConnect(playerid)
     Fish[playerid][2] = 0;
     Fish[playerid][3] = 0;
     Fish[playerid][4] = 0;
+    DapatFurn[playerid] = 0;
+    SedangCarp[playerid] = 0;
+	ToggleTp[playerid] = 0;
+	PlayerData[playerid][pDisableTwt] = 1;
+	//Radial Textdraws
+	MENU[playerid] = CreatePlayerTextDraw(playerid, 470.000000, 24.000000, "mdl-5005:menu");
+	PlayerTextDrawFont(playerid, MENU[playerid], 4);
+	PlayerTextDrawLetterSize(playerid, MENU[playerid], 0.600000, 2.000000);
+	PlayerTextDrawTextSize(playerid, MENU[playerid], 17.000000, 87.000000);
+	PlayerTextDrawSetOutline(playerid, MENU[playerid], 1);
+	PlayerTextDrawSetShadow(playerid, MENU[playerid], 0);
+	PlayerTextDrawAlignment(playerid, MENU[playerid], 1);
+	PlayerTextDrawColor(playerid, MENU[playerid], -1);
+	PlayerTextDrawBackgroundColor(playerid, MENU[playerid], 255);
+	PlayerTextDrawBoxColor(playerid, MENU[playerid], 50);
+	PlayerTextDrawUseBox(playerid, MENU[playerid], 1);
+	PlayerTextDrawSetProportional(playerid, MENU[playerid], 1);
+	PlayerTextDrawSetSelectable(playerid, MENU[playerid], 0);
+
+	MENU_X[playerid] = CreatePlayerTextDraw(playerid, 473.500000, 29.000000, "mdl-5005:menu-x");
+	PlayerTextDrawFont(playerid, MENU_X[playerid], 4);
+	PlayerTextDrawLetterSize(playerid, MENU_X[playerid], 0.600000, 2.000000);
+	PlayerTextDrawTextSize(playerid, MENU_X[playerid], 10.000000, 10.000000);
+	PlayerTextDrawSetOutline(playerid, MENU_X[playerid], 1);
+	PlayerTextDrawSetShadow(playerid, MENU_X[playerid], 0);
+	PlayerTextDrawAlignment(playerid, MENU_X[playerid], 1);
+	PlayerTextDrawColor(playerid, MENU_X[playerid], -1);
+	PlayerTextDrawBackgroundColor(playerid, MENU_X[playerid], 255);
+	PlayerTextDrawBoxColor(playerid, MENU_X[playerid], 50);
+	PlayerTextDrawUseBox(playerid, MENU_X[playerid], 1);
+	PlayerTextDrawSetProportional(playerid, MENU_X[playerid], 1);
+	PlayerTextDrawSetSelectable(playerid, MENU_X[playerid], 1);
+
+	MENU_STATS[playerid] = CreatePlayerTextDraw(playerid, 473.500000, 51.000000, "mdl-5005:menu-stats");
+	PlayerTextDrawFont(playerid, MENU_STATS[playerid], 4);
+	PlayerTextDrawLetterSize(playerid, MENU_STATS[playerid], 0.600000, 2.000000);
+	PlayerTextDrawTextSize(playerid, MENU_STATS[playerid], 10.000000, 10.000000);
+	PlayerTextDrawSetOutline(playerid, MENU_STATS[playerid], 1);
+	PlayerTextDrawSetShadow(playerid, MENU_STATS[playerid], 0);
+	PlayerTextDrawAlignment(playerid, MENU_STATS[playerid], 1);
+	PlayerTextDrawColor(playerid, MENU_STATS[playerid], -1);
+	PlayerTextDrawBackgroundColor(playerid, MENU_STATS[playerid], 255);
+	PlayerTextDrawBoxColor(playerid, MENU_STATS[playerid], 50);
+	PlayerTextDrawUseBox(playerid, MENU_STATS[playerid], 1);
+	PlayerTextDrawSetProportional(playerid, MENU_STATS[playerid], 1);
+	PlayerTextDrawSetSelectable(playerid, MENU_STATS[playerid], 1);
+
+	MENU_INVEN[playerid] = CreatePlayerTextDraw(playerid, 473.500000, 73.000000, "mdl-5005:menu-inven");
+	PlayerTextDrawFont(playerid, MENU_INVEN[playerid], 4);
+	PlayerTextDrawLetterSize(playerid, MENU_INVEN[playerid], 0.600000, 2.000000);
+	PlayerTextDrawTextSize(playerid, MENU_INVEN[playerid], 10.000000, 10.000000);
+	PlayerTextDrawSetOutline(playerid, MENU_INVEN[playerid], 1);
+	PlayerTextDrawSetShadow(playerid, MENU_INVEN[playerid], 0);
+	PlayerTextDrawAlignment(playerid, MENU_INVEN[playerid], 1);
+	PlayerTextDrawColor(playerid, MENU_INVEN[playerid], -1);
+	PlayerTextDrawBackgroundColor(playerid, MENU_INVEN[playerid], 255);
+	PlayerTextDrawBoxColor(playerid, MENU_INVEN[playerid], 50);
+	PlayerTextDrawUseBox(playerid, MENU_INVEN[playerid], 1);
+	PlayerTextDrawSetProportional(playerid, MENU_INVEN[playerid], 1);
+	PlayerTextDrawSetSelectable(playerid, MENU_INVEN[playerid], 1);
+
+	MENU_PHONE[playerid] = CreatePlayerTextDraw(playerid, 475.500000, 95.000000, "mdl-5005:menu-phone");
+	PlayerTextDrawFont(playerid, MENU_PHONE[playerid], 4);
+	PlayerTextDrawLetterSize(playerid, MENU_PHONE[playerid], 0.600000, 2.000000);
+	PlayerTextDrawTextSize(playerid, MENU_PHONE[playerid], 6.500000, 10.000000);
+	PlayerTextDrawSetOutline(playerid, MENU_PHONE[playerid], 1);
+	PlayerTextDrawSetShadow(playerid, MENU_PHONE[playerid], 0);
+	PlayerTextDrawAlignment(playerid, MENU_PHONE[playerid], 1);
+	PlayerTextDrawColor(playerid, MENU_PHONE[playerid], -1);
+	PlayerTextDrawBackgroundColor(playerid, MENU_PHONE[playerid], 255);
+	PlayerTextDrawBoxColor(playerid, MENU_PHONE[playerid], 50);
+	PlayerTextDrawUseBox(playerid, MENU_PHONE[playerid], 1);
+	PlayerTextDrawSetProportional(playerid, MENU_PHONE[playerid], 1);
+	PlayerTextDrawSetSelectable(playerid, MENU_PHONE[playerid], 1);
 	
+	//Twitter TextDraw
+	TWITTER[playerid] = CreatePlayerTextDraw(playerid, 120.000000, 401.000000, "mdl-5006:twitter");
+	PlayerTextDrawFont(playerid, TWITTER[playerid], 4);
+	PlayerTextDrawLetterSize(playerid, TWITTER[playerid], 0.600000, 2.000000);
+	PlayerTextDrawTextSize(playerid, TWITTER[playerid], 130.000000, 20.000000);
+	PlayerTextDrawSetOutline(playerid, TWITTER[playerid], 1);
+	PlayerTextDrawSetShadow(playerid, TWITTER[playerid], 0);
+	PlayerTextDrawAlignment(playerid, TWITTER[playerid], 1);
+	PlayerTextDrawColor(playerid, TWITTER[playerid], -21);
+	PlayerTextDrawBackgroundColor(playerid, TWITTER[playerid], 255);
+	PlayerTextDrawBoxColor(playerid, TWITTER[playerid], 50);
+	PlayerTextDrawUseBox(playerid, TWITTER[playerid], 1);
+	PlayerTextDrawSetProportional(playerid, TWITTER[playerid], 1);
+	PlayerTextDrawSetSelectable(playerid, TWITTER[playerid], 0);
+
+	TWITTER_TEXT[playerid] = CreatePlayerTextDraw(playerid, 144.000000, 406.000000, "");
+	PlayerTextDrawFont(playerid, TWITTER_TEXT[playerid], 1);
+	PlayerTextDrawLetterSize(playerid, TWITTER_TEXT[playerid], 0.150000, 0.900000);
+	PlayerTextDrawTextSize(playerid, TWITTER_TEXT[playerid], 400.000000, 17.000000);
+	PlayerTextDrawSetOutline(playerid, TWITTER_TEXT[playerid], 0);
+	PlayerTextDrawSetShadow(playerid, TWITTER_TEXT[playerid], 0);
+	PlayerTextDrawAlignment(playerid, TWITTER_TEXT[playerid], 1);
+	PlayerTextDrawColor(playerid, TWITTER_TEXT[playerid], -1);
+	PlayerTextDrawBackgroundColor(playerid, TWITTER_TEXT[playerid], 255);
+	PlayerTextDrawBoxColor(playerid, TWITTER_TEXT[playerid], 50);
+	PlayerTextDrawUseBox(playerid, TWITTER_TEXT[playerid], 0);
+	PlayerTextDrawSetProportional(playerid, TWITTER_TEXT[playerid], 1);
+	PlayerTextDrawSetSelectable(playerid, TWITTER_TEXT[playerid], 0);
+	
+	//Phone Textdraws
+	PHONE[playerid] = CreatePlayerTextDraw(playerid, 512.000000, 162.000000, "mdl-5004:phone");
+	PlayerTextDrawFont(playerid, PHONE[playerid], 4);
+	PlayerTextDrawLetterSize(playerid, PHONE[playerid], 0.600000, 2.000000);
+	PlayerTextDrawTextSize(playerid, PHONE[playerid], 95.000000, 235.000000);
+	PlayerTextDrawSetOutline(playerid, PHONE[playerid], 1);
+	PlayerTextDrawSetShadow(playerid, PHONE[playerid], 0);
+	PlayerTextDrawAlignment(playerid, PHONE[playerid], 1);
+	PlayerTextDrawColor(playerid, PHONE[playerid], -1);
+	PlayerTextDrawBackgroundColor(playerid, PHONE[playerid], 255);
+	PlayerTextDrawBoxColor(playerid, PHONE[playerid], 50);
+	PlayerTextDrawUseBox(playerid, PHONE[playerid], 1);
+	PlayerTextDrawSetProportional(playerid, PHONE[playerid], 1);
+	PlayerTextDrawSetSelectable(playerid, PHONE[playerid], 0);
+
+	PHONE_HOME[playerid] = CreatePlayerTextDraw(playerid, 551.000000, 372.000000, "mdl-5004:phone_home");
+	PlayerTextDrawFont(playerid, PHONE_HOME[playerid], 4);
+	PlayerTextDrawLetterSize(playerid, PHONE_HOME[playerid], 0.600000, 2.000000);
+	PlayerTextDrawTextSize(playerid, PHONE_HOME[playerid], 17.000000, 17.000000);
+	PlayerTextDrawSetOutline(playerid, PHONE_HOME[playerid], 1);
+	PlayerTextDrawSetShadow(playerid, PHONE_HOME[playerid], 0);
+	PlayerTextDrawAlignment(playerid, PHONE_HOME[playerid], 1);
+	PlayerTextDrawColor(playerid, PHONE_HOME[playerid], -1);
+	PlayerTextDrawBackgroundColor(playerid, PHONE_HOME[playerid], 255);
+	PlayerTextDrawBoxColor(playerid, PHONE_HOME[playerid], 50);
+	PlayerTextDrawUseBox(playerid, PHONE_HOME[playerid], 1);
+	PlayerTextDrawSetProportional(playerid, PHONE_HOME[playerid], 1);
+	PlayerTextDrawSetSelectable(playerid, PHONE_HOME[playerid], 1);
+
+	PHONE_TELP[playerid] = CreatePlayerTextDraw(playerid, 524.000000, 336.500000, "mdl-5004:phone_telp");
+	PlayerTextDrawFont(playerid, PHONE_TELP[playerid], 4);
+	PlayerTextDrawLetterSize(playerid, PHONE_TELP[playerid], 0.600000, 2.000000);
+	PlayerTextDrawTextSize(playerid, PHONE_TELP[playerid], 16.000000, 16.000000);
+	PlayerTextDrawSetOutline(playerid, PHONE_TELP[playerid], 1);
+	PlayerTextDrawSetShadow(playerid, PHONE_TELP[playerid], 0);
+	PlayerTextDrawAlignment(playerid, PHONE_TELP[playerid], 1);
+	PlayerTextDrawColor(playerid, PHONE_TELP[playerid], -1);
+	PlayerTextDrawBackgroundColor(playerid, PHONE_TELP[playerid], 255);
+	PlayerTextDrawBoxColor(playerid, PHONE_TELP[playerid], 50);
+	PlayerTextDrawUseBox(playerid, PHONE_TELP[playerid], 1);
+	PlayerTextDrawSetProportional(playerid, PHONE_TELP[playerid], 1);
+	PlayerTextDrawSetSelectable(playerid, PHONE_TELP[playerid], 1);
+
+	PHONE_CONTACT[playerid] = CreatePlayerTextDraw(playerid, 542.000000, 336.500000, "mdl-5004:phone_contact");
+	PlayerTextDrawFont(playerid, PHONE_CONTACT[playerid], 4);
+	PlayerTextDrawLetterSize(playerid, PHONE_CONTACT[playerid], 0.600000, 2.000000);
+	PlayerTextDrawTextSize(playerid, PHONE_CONTACT[playerid], 16.000000, 16.000000);
+	PlayerTextDrawSetOutline(playerid, PHONE_CONTACT[playerid], 1);
+	PlayerTextDrawSetShadow(playerid, PHONE_CONTACT[playerid], 0);
+	PlayerTextDrawAlignment(playerid, PHONE_CONTACT[playerid], 1);
+	PlayerTextDrawColor(playerid, PHONE_CONTACT[playerid], -1);
+	PlayerTextDrawBackgroundColor(playerid, PHONE_CONTACT[playerid], 255);
+	PlayerTextDrawBoxColor(playerid, PHONE_CONTACT[playerid], 50);
+	PlayerTextDrawUseBox(playerid, PHONE_CONTACT[playerid], 1);
+	PlayerTextDrawSetProportional(playerid, PHONE_CONTACT[playerid], 1);
+	PlayerTextDrawSetSelectable(playerid, PHONE_CONTACT[playerid], 1);
+
+	PHONE_SMS[playerid] = CreatePlayerTextDraw(playerid, 560.500000, 336.500000, "mdl-5004:phone_sms");
+	PlayerTextDrawFont(playerid, PHONE_SMS[playerid], 4);
+	PlayerTextDrawLetterSize(playerid, PHONE_SMS[playerid], 0.600000, 2.000000);
+	PlayerTextDrawTextSize(playerid, PHONE_SMS[playerid], 16.000000, 16.000000);
+	PlayerTextDrawSetOutline(playerid, PHONE_SMS[playerid], 1);
+	PlayerTextDrawSetShadow(playerid, PHONE_SMS[playerid], 0);
+	PlayerTextDrawAlignment(playerid, PHONE_SMS[playerid], 1);
+	PlayerTextDrawColor(playerid, PHONE_SMS[playerid], -1);
+	PlayerTextDrawBackgroundColor(playerid, PHONE_SMS[playerid], 255);
+	PlayerTextDrawBoxColor(playerid, PHONE_SMS[playerid], 50);
+	PlayerTextDrawUseBox(playerid, PHONE_SMS[playerid], 1);
+	PlayerTextDrawSetProportional(playerid, PHONE_SMS[playerid], 1);
+	PlayerTextDrawSetSelectable(playerid, PHONE_SMS[playerid], 1);
+
+	PHONE_CAMERA[playerid] = CreatePlayerTextDraw(playerid, 579.000000, 336.500000, "mdl-5004:phone_camera");
+	PlayerTextDrawFont(playerid, PHONE_CAMERA[playerid], 4);
+	PlayerTextDrawLetterSize(playerid, PHONE_CAMERA[playerid], 0.600000, 2.000000);
+	PlayerTextDrawTextSize(playerid, PHONE_CAMERA[playerid], 16.000000, 16.000000);
+	PlayerTextDrawSetOutline(playerid, PHONE_CAMERA[playerid], 1);
+	PlayerTextDrawSetShadow(playerid, PHONE_CAMERA[playerid], 0);
+	PlayerTextDrawAlignment(playerid, PHONE_CAMERA[playerid], 1);
+	PlayerTextDrawColor(playerid, PHONE_CAMERA[playerid], -1);
+	PlayerTextDrawBackgroundColor(playerid, PHONE_CAMERA[playerid], 255);
+	PlayerTextDrawBoxColor(playerid, PHONE_CAMERA[playerid], 50);
+	PlayerTextDrawUseBox(playerid, PHONE_CAMERA[playerid], 1);
+	PlayerTextDrawSetProportional(playerid, PHONE_CAMERA[playerid], 1);
+	PlayerTextDrawSetSelectable(playerid, PHONE_CAMERA[playerid], 1);
+	
+	PHONE_TWITTER[playerid] = CreatePlayerTextDraw(playerid, 524.000000, 226.500000, "mdl-5004:phone_twitter");
+	PlayerTextDrawFont(playerid, PHONE_TWITTER[playerid], 4);
+	PlayerTextDrawLetterSize(playerid, PHONE_TWITTER[playerid], 0.600000, 2.000000);
+	PlayerTextDrawTextSize(playerid, PHONE_TWITTER[playerid], 16.000000, 16.000000);
+	PlayerTextDrawSetOutline(playerid, PHONE_TWITTER[playerid], 1);
+	PlayerTextDrawSetShadow(playerid, PHONE_TWITTER[playerid], 0);
+	PlayerTextDrawAlignment(playerid, PHONE_TWITTER[playerid], 1);
+	PlayerTextDrawColor(playerid, PHONE_TWITTER[playerid], -1);
+	PlayerTextDrawBackgroundColor(playerid, PHONE_TWITTER[playerid], 255);
+	PlayerTextDrawBoxColor(playerid, PHONE_TWITTER[playerid], 50);
+	PlayerTextDrawUseBox(playerid, PHONE_TWITTER[playerid], 1);
+	PlayerTextDrawSetProportional(playerid, PHONE_TWITTER[playerid], 1);
+	PlayerTextDrawSetSelectable(playerid, PHONE_TWITTER[playerid], 1);
+	
+	
+	//Mekanik 
+	RemoveBuildingForPlayer(playerid, 13061, 321.851, -34.523, 4.898, 0.250);
+	RemoveBuildingForPlayer(playerid, 13063, 321.851, -34.523, 4.898, 0.250);
+	RemoveBuildingForPlayer(playerid, 1684, 317.695, -42.234, 2.015, 0.250);
+
 	// Gas pumps
 	RemoveBuildingForPlayer(playerid, 1676, 1941.6563, -1767.2891, 14.1406, 6000.00);
 	RemoveBuildingForPlayer(playerid, 3465, 2120.8203, 914.7188, 11.2578, 6000.00);
@@ -19354,13 +20439,13 @@ public OnPlayerDisconnect(playerid, reason)
  	
  	// Fishing Set to 0 when player Disconnect
     Fishing[playerid] = 0;
+    takingselfie[playerid] = 0;
     HasBait[playerid] = 0;
     HasRod[playerid] = 0;
     Fish[playerid][1] = 0;
     Fish[playerid][2] = 0;
     Fish[playerid][3] = 0;
     Fish[playerid][4] = 0;
-    
 	return 1;
 }
 
@@ -19457,8 +20542,8 @@ public OnGameModeInit()
 	CreateDynamicPickup(1581, 23, -2033.0439, -117.4885, 1035.1719);
 	CreateDynamic3DTextLabel("{ADD8E6}[Driving Test]\n{FFFFFF}Type /drivingtest to start the test.", COLOR_DEPARTMENT, -2033.0439, -117.4885, 1035.1719, 10.0, INVALID_PLAYER_ID, INVALID_VEHICLE_ID, 0, -1);
 
-	CreateDynamicPickup(1239, 23, 1260.3976, -20.0215, 1001.0234);
-	CreateDynamic3DTextLabel("{ADD8E6}[Cargo Unloading]\n{FFFFFF}Type /loadcrate to begin loading cargo.", COLOR_YELLOW, 1260.3976, -20.0215, 1001.0234, 10.0, INVALID_PLAYER_ID, INVALID_VEHICLE_ID, 0, -1);
+	CreateDynamicPickup(1239, 23, 44.1515,-261.2060,1.8132);
+	CreateDynamic3DTextLabel("{ADD8E6}[Cargo Unloading]\n{FFFFFF}Type /loadcrate to begin loading cargo.", COLOR_YELLOW, 44.1515,-261.2060,1.8132, 10.0, INVALID_PLAYER_ID, INVALID_VEHICLE_ID, 0, -1);
 
     CreateDynamicPickupEx(1239, 23, 361.2687, 171.5613, 1008.3828, 100.0, arrVirtualWorlds);
 	CreateDynamic3DTextLabel("{ADD8E6}[Tickets]\n{FFFFFF}Type /tickets to pay your tickets.", COLOR_DEPARTMENT, 361.2687, 171.5613, 1008.3828, 10.0);
@@ -19511,6 +20596,74 @@ public OnGameModeInit()
 	CreateDynamicPickup(1239, 23, 2160.9531,-101.6494,2.7500);
 	CreateDynamic3DTextLabel("{ADD8E6}[Sell Fish]\n{FFFFFF}Use {FFFF00}/sellfish {FFFFFF}to sell all fish.", COLOR_WHITE, 2160.9531,-101.6494,2.7500, 10.0);
 
+	CreateDynamic3DTextLabel("{FFFF00}'/sellfurniture'\n{FFFFFF}Untuk menjual Furniture.", COLOR_WHITE, 93.6362,-185.5425,1.4844, 5.0);//425.6796,-85.3143,1501.0859
+	CreateDynamicPickup(1239, 1, 93.6362,-185.5425,1.4844);
+	
+	CreateDynamic3DTextLabel("{FFFF00}'/carpenter'\n{FFFFFF}Untuk membuat Furniture.", COLOR_WHITE, 97.7825,-167.4552,2.5938, 10.0);
+	CreateDynamic3DTextLabel("{FFFF00}'/carpenter'\n{FFFFFF}Untuk membuat Furniture.", COLOR_WHITE, 93.3801,-167.4703,2.5938, 10.0);
+	CreateDynamic3DTextLabel("{FFFF00}'/carpenter'\n{FFFFFF}Untuk membuat Furniture.", COLOR_WHITE, 89.0998,-167.4022,2.5938, 10.0);
+	
+	new tmpobjid, obj_wd = -1, obj_int = 2;
+	tmpobjid = CreateDynamicObject(19357, 1371.049926, 1721.322998, 10.010330, 0.000000, 90.000000, 0.000000, obj_wd, obj_int, -1, 500.00, 500.00);
+	SetDynamicObjectMaterial(tmpobjid, 0, 16093, "a51_ext", "ws_trans_concr", 0x00000000);
+	tmpobjid = CreateDynamicObject(19357, 1367.590942, 1721.322998, 10.010330, 0.000000, 90.000000, 0.000000, obj_wd, obj_int, -1, 500.00, 500.00);
+	SetDynamicObjectMaterial(tmpobjid, 0, 16093, "a51_ext", "ws_trans_concr", 0x00000000);
+	tmpobjid = CreateDynamicObject(19357, 1364.240112, 1721.322998, 10.010330, 0.000000, 90.000000, 0.000000, obj_wd, obj_int, -1, 500.00, 500.00);
+	SetDynamicObjectMaterial(tmpobjid, 0, 16093, "a51_ext", "ws_trans_concr", 0x00000000);
+	tmpobjid = CreateDynamicObject(19357, 1371.190063, 1719.643432, 11.730332, 0.000000, 180.000000, 90.000000, obj_wd, obj_int, -1, 500.00, 500.00);
+	SetDynamicObjectMaterial(tmpobjid, 0, 10101, "2notherbuildsfe", "sl_vicwall02", 0x00000000);
+	tmpobjid = CreateDynamicObject(19357, 1368.000122, 1719.643432, 11.730332, 0.000000, 180.000000, 90.000000, obj_wd, obj_int, -1, 500.00, 500.00);
+	SetDynamicObjectMaterial(tmpobjid, 0, 10101, "2notherbuildsfe", "sl_vicwall02", 0x00000000);
+	tmpobjid = CreateDynamicObject(19357, 1364.809692, 1719.643432, 11.730332, 0.000000, 180.000000, 90.000000, obj_wd, obj_int, -1, 500.00, 500.00);
+	SetDynamicObjectMaterial(tmpobjid, 0, 10101, "2notherbuildsfe", "sl_vicwall02", 0x00000000);
+	tmpobjid = CreateDynamicObject(19357, 1364.399291, 1721.244506, 11.730332, 0.000000, 180.000000, 180.000000, obj_wd, obj_int, -1, 500.00, 500.00);
+	SetDynamicObjectMaterial(tmpobjid, 0, 10101, "2notherbuildsfe", "sl_vicwall02", 0x00000000);
+	tmpobjid = CreateDynamicObject(19357, 1364.399291, 1724.513671, 11.730332, 0.000000, 180.000000, 180.000000, obj_wd, obj_int, -1, 500.00, 500.00);
+	SetDynamicObjectMaterial(tmpobjid, 0, 10101, "2notherbuildsfe", "sl_vicwall02", 0x00000000);
+	tmpobjid = CreateDynamicObject(19357, 1364.399291, 1722.912597, 11.730332, 0.000000, 180.000000, 270.000000, obj_wd, obj_int, -1, 500.00, 500.00);
+	SetDynamicObjectMaterial(tmpobjid, 0, 10101, "2notherbuildsfe", "sl_vicwall02", 0x00000000);
+	tmpobjid = CreateDynamicObject(19357, 1367.519409, 1722.912597, 11.730332, 0.000000, 180.000000, 270.000000, obj_wd, obj_int, -1, 500.00, 500.00);
+	SetDynamicObjectMaterial(tmpobjid, 0, 10101, "2notherbuildsfe", "sl_vicwall02", 0x00000000);
+	tmpobjid = CreateDynamicObject(19357, 1370.618652, 1722.912597, 11.730332, 0.000000, 180.000000, 270.000000, obj_wd, obj_int, -1, 500.00, 500.00);
+	SetDynamicObjectMaterial(tmpobjid, 0, 10101, "2notherbuildsfe", "sl_vicwall02", 0x00000000);
+	tmpobjid = CreateDynamicObject(19357, 1373.448364, 1722.912597, 11.730332, 0.000000, 180.000000, 270.000000, obj_wd, obj_int, -1, 500.00, 500.00);
+	SetDynamicObjectMaterial(tmpobjid, 0, 10101, "2notherbuildsfe", "sl_vicwall02", 0x00000000);
+	tmpobjid = CreateDynamicObject(19357, 1372.777709, 1721.352172, 11.730332, 0.000000, 180.000000, 360.000000, obj_wd, obj_int, -1, 500.00, 500.00);
+	SetDynamicObjectMaterial(tmpobjid, 0, 10101, "2notherbuildsfe", "sl_vicwall02", 0x00000000);
+	tmpobjid = CreateDynamicObject(19357, 1371.009887, 1721.322998, 13.470343, 0.000000, 90.000000, 0.000000, obj_wd, obj_int, -1, 500.00, 500.00);
+	SetDynamicObjectMaterial(tmpobjid, 0, 10101, "2notherbuildsfe", "ferry_build14", 0x00000000);
+	tmpobjid = CreateDynamicObject(19357, 1367.658935, 1721.322998, 13.470343, 0.000000, 90.000000, 0.000000, obj_wd, obj_int, -1, 500.00, 500.00);
+	SetDynamicObjectMaterial(tmpobjid, 0, 10101, "2notherbuildsfe", "ferry_build14", 0x00000000);
+	tmpobjid = CreateDynamicObject(19357, 1364.338867, 1721.322998, 13.470343, 0.000000, 90.000000, 0.000000, obj_wd, obj_int, -1, 500.00, 500.00);
+	SetDynamicObjectMaterial(tmpobjid, 0, 10101, "2notherbuildsfe", "ferry_build14", 0x00000000);
+	tmpobjid = CreateDynamicObject(19357, 1370.349243, 1719.643432, 11.730332, 0.000000, 180.000000, 180.000000, obj_wd, obj_int, -1, 500.00, 500.00);
+	SetDynamicObjectMaterial(tmpobjid, 0, 10101, "2notherbuildsfe", "sl_vicwall02", 0x00000000);
+	/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	tmpobjid = CreateDynamicObject(2603, 1365.694702, 1722.209960, 10.476263, 0.000000, 0.000000, 90.000000, obj_wd, obj_int, -1, 500.00, 500.00);
+	tmpobjid = CreateDynamicObject(2948, 1364.434570, 1721.117187, 10.096267, 0.000000, 0.000000, 0.000000, obj_wd, obj_int, -1, 500.00, 500.00);
+	tmpobjid = CreateDynamicObject(2700, 1370.011962, 1720.479736, 11.966278, 0.000000, 0.000000, 180.000000, obj_wd, obj_int, -1, 500.00, 500.00);
+	tmpobjid = CreateDynamicObject(2700, 1370.011962, 1720.479736, 11.966278, 0.000000, 0.000000, 180.000000, obj_wd, obj_int, -1, 500.00, 500.00);
+	tmpobjid = CreateDynamicObject(2700, 1370.011962, 1720.479736, 11.966278, 0.000000, 0.000000, 180.000000, obj_wd, obj_int, -1, 500.00, 500.00);
+	tmpobjid = CreateDynamicObject(2346, 1369.758666, 1720.938354, 10.066264, 0.000000, 0.000000, 270.000000, obj_wd, obj_int, -1, 500.00, 500.00);
+	tmpobjid = CreateDynamicObject(2059, 1369.729003, 1720.510009, 10.570146, 0.000000, 0.000000, 59.000000, obj_wd, obj_int, -1, 500.00, 500.00);
+	tmpobjid = CreateDynamicObject(19893, 1370.035522, 1720.442016, 10.548171, 0.000000, 0.000000, 270.000000, obj_wd, obj_int, -1, 500.00, 500.00);
+	tmpobjid = CreateDynamicObject(11684, 1368.474853, 1720.478149, 10.078982, 0.000000, 0.000000, 0.000000, obj_wd, obj_int, -1, 500.00, 500.00);
+	tmpobjid = CreateDynamicObject(2132, 1372.110961, 1720.225830, 10.078102, 0.000000, 0.000000, 180.000000, obj_wd, obj_int, -1, 500.00, 500.00);
+
+	//Mapping Carpenter
+	new object_world = -1, object_int = -1;
+	CreateDynamicObject(1685, 90.781303, -186.563003, 1.289059, 0.000000, 0.000000, 0.000000, object_world, object_int, -1, 300.00, 300.00);
+	CreateDynamicObject(2315, 96.977943, -168.093124, 1.583750, 0.000000, 0.000000, 0.000000, object_world, object_int, -1, 300.00, 300.00);
+	CreateDynamicObject(2315, 92.597961, -168.093124, 1.583750, 0.000000, 0.000000, 0.000000, object_world, object_int, -1, 300.00, 300.00);
+	CreateDynamicObject(2315, 88.307952, -168.093124, 1.583750, 0.000000, 0.000000, 0.000000, object_world, object_int, -1, 300.00, 300.00);
+	CreateDynamicObject(2991, 97.741012, -162.408218, 2.173749, 0.000000, 0.000000, 0.000000, object_world, object_int, -1, 300.00, 300.00);
+	CreateDynamicObject(2991, 93.610992, -162.408218, 2.173749, 0.000000, 0.000000, 0.000000, object_world, object_int, -1, 300.00, 300.00);
+	CreateDynamicObject(1453, 97.789756, -168.159896, 2.603749, 0.000000, 0.000000, 0.000000, object_world, object_int, -1, 300.00, 300.00);
+	CreateDynamicObject(1453, 93.409790, -168.159896, 2.603749, 0.000000, 0.000000, 0.000000, object_world, object_int, -1, 300.00, 300.00);
+	CreateDynamicObject(1453, 89.069793, -168.159896, 2.603749, 0.000000, 0.000000, 0.000000, object_world, object_int, -1, 300.00, 300.00);
+
     // Bank Actor Palomino and Entrance In and Out
 	new SecurityBank, SecurityBank2;
     CreateActor(147, 1462.7246, 1400.7113, 14.2063, 85.3230); // Cashier Bank
@@ -19521,7 +20674,156 @@ public OnGameModeInit()
 	SecurityBank2 = CreateActor(71, 1447.5153, 1392.5463, 14.2063, 274.4098); // Security 2
 	ApplyActorAnimation(SecurityBank, "DEALER", "shop_pay", 4.1, 0, 0, 0, 0, 0); // Animation For Security
 	ApplyActorAnimation(SecurityBank2, "DEALER", "shop_pay", 4.1, 0, 0, 0, 0, 0); // Animation For Security
-	
+
+	//MEKANIK
+	Create3DTextLabel("/garage", COLOR_ORANGE, 308.6821, -30.1928, 2.0000, 5.0, 0, 0);
+	Create3DTextLabel("/lift", COLOR_ORANGE, 320.3362, -20.3055, 2.0000, 5.0, 0, 0);
+
+	lift = CreateDynamicObject(-5010, 322.476196, -22.485137, 1.378123, 0.000000, 0.000000, 90.000000, object_world, object_int, -1, 1000.00, 1000.00);
+
+	garasi[0] = CreateDynamicObject(2957, 317.208282, -29.758142, 2.154839, 0.000000, 0.000000, 0.000000, object_world, object_int, -1, 1000.00, 1000.00);
+	SetDynamicObjectMaterial(garasi[0], 0, 6282, "beafron2_law2", "LoadingDoorClean", 0x00000000);//GARASI1
+
+	garasi[1] = CreateDynamicObject(2662, 317.195251, -29.843124, 2.233045, 0.000000, 0.000000, 0.000000, object_world, object_int, -1, 1000.00, 1000.00);
+	SetDynamicObjectMaterialText(garasi[1], 0, "j", 130, "Wingdings", 199, 1, 0xFF000000, 0x00000000, 1);//GARASI1
+
+	garasi[2] = CreateDynamicObject(2662, 317.195251, -29.843124, 2.373045, 0.000000, 0.000000, 0.000000, object_world, object_int, -1, 1000.00, 1000.00);
+	SetDynamicObjectMaterialText(garasi[2], 0, "repair yourcar\nas fast as f*ck as you can", 130, "Mistral", 50, 1, 0xFF000000, 0x00000000, 0);//GARASI1
+
+	garasi[3] = CreateDynamicObject(2957, 322.508453, -29.758142, 2.154839, 0.000000, 0.000000, 0.000000, object_world, object_int, -1, 1000.00, 1000.00);
+	SetDynamicObjectMaterial(garasi[3], 0, 6282, "beafron2_law2", "LoadingDoorClean", 0x00000000);//GARASI2
+
+	garasi[4] = CreateDynamicObject(2662, 323.608154, -29.840919, 3.104894, 0.000000, 0.000000, 0.000000, object_world, object_int, -1, 1000.00, 1000.00);
+	SetDynamicObjectMaterial(garasi[4], 0, 4981, "wiresetc2_las", "ganggraf03_LA", 0x00000000);//GARASI2
+
+	garasi[5] = CreateDynamicObject(2662, 322.565185, -29.843124, 2.233045, 0.000000, 0.000000, 0.000000, object_world, object_int, -1, 1000.00, 1000.00);
+	SetDynamicObjectMaterialText(garasi[5], 0, "j", 130, "Wingdings", 199, 1, 0xFF000000, 0x00000000, 1);//GARASI2
+
+	tmpobjid = CreateDynamicObject(19598, 324.827270, -25.075542, 2.994517, 0.000000, -0.000014, 179.999801, object_world, object_int, -1, 1000.00, 1000.00);
+	SetDynamicObjectMaterial(tmpobjid, 4, 4005, "lanblokd", "decobuild2b_LAn", 0x00000000);
+	tmpobjid = CreateDynamicObject(2660, 307.767059, -20.405538, 2.605444, 0.000039, -17.199974, 78.599937, object_world, object_int, -1, 1000.00, 1000.00);
+	SetDynamicObjectMaterial(tmpobjid, 0, 14530, "estate2", "Auto_feltzer", 0x00000000);
+	tmpobjid = CreateDynamicObject(3077, 307.896453, -19.580272, 0.602759, 0.000039, 0.000014, 77.899917, object_world, object_int, -1, 1000.00, 1000.00);
+	SetDynamicObjectMaterial(tmpobjid, 0, 14530, "estate2", "ab_dsWhiteboard", 0x00000000);
+	SetDynamicObjectMaterial(tmpobjid, 1, 10778, "airportcpark_sfse", "ws_crashbarrier", 0x00000000);
+	tmpobjid = CreateDynamicObject(2720, 308.118347, -18.864818, 2.469213, 0.000039, 0.000014, 77.999885, object_world, object_int, -1, 1000.00, 1000.00);
+	SetDynamicObjectMaterial(tmpobjid, 0, 14530, "estate2", "Auto_hustler", 0x00000000);
+	tmpobjid = CreateDynamicObject(19477, 311.580566, -18.348693, 0.669409, 0.000014, 90.000000, 91.199928, object_world, object_int, -1, 1000.00, 1000.00);
+	SetDynamicObjectMaterial(tmpobjid, 0, 14708, "labig1int2", "GB_restaursmll53", 0x00000000);
+	tmpobjid = CreateDynamicObject(1301, 311.480468, -18.377502, -0.220970, -0.000014, 0.000000, -89.999992, object_world, object_int, -1, 1000.00, 1000.00);
+	SetDynamicObjectMaterial(tmpobjid, 0, 16640, "a51", "banding3_64HV", 0x00000000);
+	tmpobjid = CreateDynamicObject(19477, 311.637725, -24.062593, 0.689427, 0.000029, 90.000038, -55.499855, object_world, object_int, -1, 1000.00, 1000.00);
+	SetDynamicObjectMaterial(tmpobjid, 0, 1376, "cranes_dyn2_cj", "ws_cablehang", 0x00000000);
+	tmpobjid = CreateDynamicObject(19482, 315.066894, -20.830516, 0.625537, 0.000022, 90.000022, 89.999900, object_world, object_int, -1, 1000.00, 1000.00);
+	SetDynamicObjectMaterial(tmpobjid, 0, 14577, "casinovault01", "ab_loadbayMark01", 0x00000000);
+	tmpobjid = CreateDynamicObject(920, 311.527526, -25.383899, 1.047584, 0.000036, 0.000000, -20.899934, object_world, object_int, -1, 1000.00, 1000.00);
+	SetDynamicObjectMaterial(tmpobjid, 0, 14776, "genintintcarint3", "tool_store", 0x00000000);
+	SetDynamicObjectMaterial(tmpobjid, 1, 14776, "genintintcarint3", "yellowvertical_64HV", 0x00000000);
+	SetDynamicObjectMaterial(tmpobjid, 2, 10140, "frieghter2sfe", "sf_ship_pipes", 0x00000000);
+	tmpobjid = CreateDynamicObject(1244, 319.765258, -18.134876, 1.383399, -0.000020, 0.000004, 179.999847, object_world, object_int, -1, 1000.00, 1000.00);
+	SetDynamicObjectMaterial(tmpobjid, 0, 5154, "dkcargoshp_las2", "alarm_64", 0x00000000);
+	SetDynamicObjectMaterial(tmpobjid, 1, 1654, "dynamite", "redcan", 0x00000000);
+	tmpobjid = CreateDynamicObject(1370, 319.780883, -18.398302, 1.246801, 89.999992, 422.065795, -62.065834, object_world, object_int, -1, 1000.00, 1000.00);
+	SetDynamicObjectMaterial(tmpobjid, 0, 1654, "dynamite", "redcan", 0x00000000);
+	tmpobjid = CreateDynamicObject(11736, 319.285522, -18.979114, 1.510962, -0.000020, 61.600013, 179.999847, object_world, object_int, -1, 1000.00, 1000.00);
+	SetDynamicObjectMaterial(tmpobjid, 0, 1654, "dynamite", "redcan", 0x00000000);
+	tmpobjid = CreateDynamicObject(11736, 319.498168, -18.979114, 1.726294, -0.000020, 30.000005, 179.999847, object_world, object_int, -1, 1000.00, 1000.00);
+	SetDynamicObjectMaterial(tmpobjid, 0, 1654, "dynamite", "redcan", 0x00000000);
+	tmpobjid = CreateDynamicObject(11736, 319.789916, -18.979114, 1.802098, -0.000020, 0.000004, 179.999847, object_world, object_int, -1, 1000.00, 1000.00);
+	SetDynamicObjectMaterial(tmpobjid, 0, 1654, "dynamite", "redcan", 0x00000000);
+	tmpobjid = CreateDynamicObject(11738, 319.666595, -19.765121, 0.704689, -0.000009, 0.000018, -29.899997, object_world, object_int, -1, 1000.00, 1000.00);
+	SetDynamicObjectMaterial(tmpobjid, 0, 10101, "2notherbuildsfe", "sl_vicrfedge", 0x00000000);
+	tmpobjid = CreateDynamicObject(19859, 308.509246, -23.478712, 1.707136, -0.000007, 0.000001, -73.699981, object_world, object_int, -1, 1000.00, 1000.00);
+	SetDynamicObjectMaterial(tmpobjid, 0, 14668, "711c", "CJ_CHIP_M2", 0x00000000);
+	tmpobjid = CreateDynamicObject(19859, 308.458923, -26.285259, 1.707136, -0.000007, 0.000001, -70.199996, object_world, object_int, -1, 1000.00, 1000.00);
+	SetDynamicObjectMaterial(tmpobjid, 0, 14668, "711c", "CJ_CHIP_M2", 0x00000000);
+	tmpobjid = CreateDynamicObject(19859, 308.468963, -26.313430, 1.707136, 0.000007, 0.000001, 71.699958, object_world, object_int, -1, 1000.00, 1000.00);
+	SetDynamicObjectMaterial(tmpobjid, 0, 14654, "ab_trukstpe", "bbar_plates2", 0x00000000);
+	tmpobjid = CreateDynamicObject(11729, 306.640106, -25.218826, 0.469832, 0.000007, 0.000000, 89.999916, object_world, object_int, -1, 1000.00, 1000.00);
+	SetDynamicObjectMaterial(tmpobjid, 0, 16093, "a51_ext", "alleydoor2", 0x00000000);
+	tmpobjid = CreateDynamicObject(11729, 306.640106, -25.889114, 0.469832, 0.000007, 0.000000, 89.999916, object_world, object_int, -1, 1000.00, 1000.00);
+	SetDynamicObjectMaterial(tmpobjid, 0, 16093, "a51_ext", "alleydoor2", 0x00000000);
+	tmpobjid = CreateDynamicObject(11729, 306.640106, -22.848352, 0.469832, 0.000014, 0.000000, 89.999893, object_world, object_int, -1, 1000.00, 1000.00);
+	SetDynamicObjectMaterial(tmpobjid, 0, 16093, "a51_ext", "alleydoor2", 0x00000000);
+	tmpobjid = CreateDynamicObject(11729, 306.640106, -26.569778, 0.469832, 0.000007, 0.000000, 89.999916, object_world, object_int, -1, 1000.00, 1000.00);
+	SetDynamicObjectMaterial(tmpobjid, 0, 16093, "a51_ext", "alleydoor2", 0x00000000);
+	tmpobjid = CreateDynamicObject(11729, 306.640106, -27.260330, 0.469832, 0.000007, 0.000000, 89.999916, object_world, object_int, -1, 1000.00, 1000.00);
+	SetDynamicObjectMaterial(tmpobjid, 0, 16093, "a51_ext", "alleydoor2", 0x00000000);
+	tmpobjid = CreateDynamicObject(11707, 306.470184, -29.725173, 2.278670, 0.000007, 0.000000, 89.999916, object_world, object_int, -1, 1000.00, 1000.00);
+	SetDynamicObjectMaterial(tmpobjid, 0, 14668, "711c", "CJ_CHIP_M2", 0xFFFFFFFF);
+	SetDynamicObjectMaterial(tmpobjid, 1, 18787, "matramps", "roadguides", 0x00000000);
+	SetDynamicObjectMaterial(tmpobjid, 2, 18787, "matramps", "roadguides", 0x00000000);
+	tmpobjid = CreateDynamicObject(19482, 315.066894, -25.120529, 0.625539, 0.000022, 90.000022, 89.999900, object_world, object_int, -1, 1000.00, 1000.00);
+	SetDynamicObjectMaterial(tmpobjid, 0, 14577, "casinovault01", "ab_loadbayMark01", 0x00000000);
+	tmpobjid = CreateDynamicObject(1492, 311.649383, -28.057001, 0.566186, 0.000000, 0.000000, 0.000000, object_world, object_int, -1, 1000.00, 1000.00);
+	SetDynamicObjectMaterial(tmpobjid, 0, 10765, "airportgnd_sfse", "white", 0x00000000);
+	SetDynamicObjectMaterial(tmpobjid, 1, 16093, "a51_ext", "des_backdoor1", 0x00000000);
+	tmpobjid = CreateDynamicObject(2693, 317.323760, -30.838508, 8.696531, 0.000000, 0.000000, 0.000000, object_world, object_int, -1, 1000.00, 1000.00);
+	SetDynamicObjectMaterial(tmpobjid, 1, 18246, "cw_junkyard2cs_t", "Was_scrpyd_tires", 0x00000000);
+	tmpobjid = CreateDynamicObject(19426, 319.739349, -31.021162, 8.355503, 90.000000, 0.000000, 90.000000, object_world, object_int, -1, 1000.00, 1000.00);
+	SetDynamicObjectMaterial(tmpobjid, 0, 10765, "airportgnd_sfse", "black64", 0x00000000);
+	tmpobjid = CreateDynamicObject(2662, 319.045379, -31.133152, 8.623044, 0.000000, 0.000000, 0.000000, object_world, object_int, -1, 1000.00, 1000.00);
+	SetDynamicObjectMaterialText(tmpobjid, 0, "auto repair\n& customs", 130, "Segoe Script", 140, 1, 0xFFFFFFFF, 0x00000000, 1);
+	tmpobjid = CreateDynamicObject(2662, 320.695465, -31.133152, 8.623044, 0.000000, 0.000000, 0.000000, object_world, object_int, -1, 1000.00, 1000.00);
+	SetDynamicObjectMaterialText(tmpobjid, 0, "-est-\n2021", 130, "Comic Sans MS", 100, 1, 0xFFFFFFFF, 0x00000000, 1);
+	tmpobjid = CreateDynamicObject(2662, 317.265472, -31.037847, 8.815366, -10.399990, 0.000000, 0.000000, object_world, object_int, -1, 1000.00, 1000.00);
+	SetDynamicObjectMaterialText(tmpobjid, 0, "j", 130, "Wingdings", 199, 1, 0xFFFFFFFF, 0x00000000, 1);
+	tmpobjid = CreateDynamicObject(14793, 319.597503, -23.100374, 9.696105, 7.999995, 0.000000, 0.000000, object_world, object_int, -1, 1000.00, 1000.00);
+	SetDynamicObjectMaterial(tmpobjid, 0, 1419, "break_fence3", "CJ_FRAME_Glass", 0x00000000);
+	tmpobjid = CreateDynamicObject(19482, 326.170227, -27.077852, 1.842407, 0.000000, 0.000000, 0.000000, object_world, object_int, -1, 1000.00, 1000.00);
+	SetDynamicObjectMaterial(tmpobjid, 0, 5069, "ctscene_las", "cleargraf02_LA", 0x00000000);
+	tmpobjid = CreateDynamicObject(19483, 320.771118, -29.852018, 5.400067, 14.599983, 0.000000, 90.000000, object_world, object_int, -1, 1000.00, 1000.00);
+	SetDynamicObjectMaterial(tmpobjid, 0, 4227, "graffiti_lan01", "cleargraf01_LA", 0x00000000);
+	tmpobjid = CreateDynamicObject(19483, 318.605072, -29.852018, 6.303936, -4.200009, 0.000000, 90.000000, object_world, object_int, -1, 1000.00, 1000.00);
+	SetDynamicObjectMaterial(tmpobjid, 0, 14801, "lee_bdupsmain", "Bdup_graf1", 0x00000000);
+	tmpobjid = CreateDynamicObject(19482, 326.170227, -19.677845, 5.422411, 0.000000, 0.000000, 0.000000, object_world, object_int, -1, 1000.00, 1000.00);
+	SetDynamicObjectMaterial(tmpobjid, 0, 5390, "glenpark7_lae", "ganggraf01_LA", 0x00000000);
+	tmpobjid = CreateDynamicObject(19482, 326.150207, -19.677845, 5.422411, 0.000000, 0.000000, 180.000000, object_world, object_int, -1, 1000.00, 1000.00);
+	SetDynamicObjectMaterial(tmpobjid, 0, 5114, "beach_las2", "ganggraf04_LA", 0x00000000);
+	tmpobjid = CreateDynamicObject(19482, 307.400238, -25.557847, 5.422411, 0.000000, 0.000000, 179.999893, object_world, object_int, -1, 1000.00, 1000.00);
+	SetDynamicObjectMaterial(tmpobjid, 0, 4227, "graffiti_lan01", "cleargraf01_LA", 0x00000000);
+	tmpobjid = CreateDynamicObject(19482, 307.400238, -19.727846, 5.422411, 0.000000, 0.000000, 179.999893, object_world, object_int, -1, 1000.00, 1000.00);
+	SetDynamicObjectMaterial(tmpobjid, 0, 5069, "ctscene_las", "cleargraf02_LA", 0x00000000);
+	tmpobjid = CreateDynamicObject(19826, 308.785156, -30.765186, 2.228122, 0.000000, 0.000000, 180.000000, object_world, object_int, -1, 1000.00, 1000.00);
+	SetDynamicObjectMaterial(tmpobjid, 0, 11150, "ab_acc_control", "ab_dialsSwitches", 0x00000000);
+	/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	tmpobjid = CreateDynamicObject(-5009, 322.476196, -22.485137, 1.378123, 0.000000, 0.000000, 90.000000, object_world, object_int, -1, 1000.00, 1000.00);
+	tmpobjid = CreateDynamicObject(19921, 310.262939, -19.116760, 0.724097, -0.000012, 0.000007, -57.799995, object_world, object_int, -1, 1000.00, 1000.00);
+	tmpobjid = CreateDynamicObject(19917, 311.627685, -18.331604, 1.037696, -0.000014, 0.000000, -89.999992, object_world, object_int, -1, 1000.00, 1000.00);
+	tmpobjid = CreateDynamicObject(14478, 321.445434, -27.642894, 0.876830, 0.000022, -0.000022, 179.999771, object_world, object_int, -1, 1000.00, 1000.00);
+	tmpobjid = CreateDynamicObject(1421, 308.820770, -31.481897, 1.285529, 0.000022, -0.000022, 179.999771, object_world, object_int, -1, 1000.00, 1000.00);
+	tmpobjid = CreateDynamicObject(1558, 314.203338, -29.196817, 1.185199, 0.000022, 0.000022, 89.999900, object_world, object_int, -1, 1000.00, 1000.00);
+	tmpobjid = CreateDynamicObject(1270, 319.800659, -18.258167, 1.807715, -89.999992, -602.065673, 117.934196, object_world, object_int, -1, 1000.00, 1000.00);
+	tmpobjid = CreateDynamicObject(1270, 319.800659, -18.918323, 1.257421, -89.999992, -422.065704, 117.934196, object_world, object_int, -1, 1000.00, 1000.00);
+	tmpobjid = CreateDynamicObject(1081, 319.788940, -18.972766, 1.239598, 0.000003, 0.000020, -90.000091, object_world, object_int, -1, 1000.00, 1000.00);
+	tmpobjid = CreateDynamicObject(1650, 316.985626, -18.576984, 1.851168, 0.000007, 0.000012, 29.499982, object_world, object_int, -1, 1000.00, 1000.00);
+	tmpobjid = CreateDynamicObject(11709, 306.822235, -29.708328, 1.167341, 0.000007, 0.000000, 89.999916, object_world, object_int, -1, 1000.00, 1000.00);
+	tmpobjid = CreateDynamicObject(2386, 306.631072, -22.841272, 2.639266, 0.000014, 0.000000, 89.999893, object_world, object_int, -1, 1000.00, 1000.00);
+	tmpobjid = CreateDynamicObject(2386, 306.631072, -26.571365, 2.639266, 0.000007, 0.000000, 89.999916, object_world, object_int, -1, 1000.00, 1000.00);
+	tmpobjid = CreateDynamicObject(19898, 313.717224, -20.920970, 0.645533, -0.000024, 0.000020, -3.599951, object_world, object_int, -1, 1000.00, 1000.00);
+	tmpobjid = CreateDynamicObject(3633, 316.615570, -18.117801, 1.068701, 0.000011, 0.000029, 88.499923, object_world, object_int, -1, 1000.00, 1000.00);
+	tmpobjid = CreateDynamicObject(19898, 313.751281, -23.986227, 0.626538, 0.000011, 0.000029, 65.500000, object_world, object_int, -1, 1000.00, 1000.00);
+	tmpobjid = CreateDynamicObject(1299, 310.952972, -29.900608, 1.048684, 0.000022, 0.000022, 89.999900, object_world, object_int, -1, 1000.00, 1000.00);
+	tmpobjid = CreateDynamicObject(1421, 310.338836, -31.806922, 1.285529, 0.000022, -0.000022, -130.900222, object_world, object_int, -1, 1000.00, 1000.00);
+	tmpobjid = CreateDynamicObject(19898, 316.679962, -18.331563, 0.625536, 0.000011, 0.000029, 65.500000, object_world, object_int, -1, 1000.00, 1000.00);
+	tmpobjid = CreateDynamicObject(19899, 325.622497, -27.648935, 0.623574, 0.000000, 0.000000, 180.000000, object_world, object_int, -1, 1000.00, 1000.00);
+	tmpobjid = CreateDynamicObject(19900, 325.682556, -25.298931, 0.623574, 0.000000, 0.000000, 180.000000, object_world, object_int, -1, 1000.00, 1000.00);
+	tmpobjid = CreateDynamicObject(19900, 325.682556, -25.978933, 0.623574, 0.000000, 0.000000, 180.000000, object_world, object_int, -1, 1000.00, 1000.00);
+	tmpobjid = CreateDynamicObject(19921, 325.370391, -25.315683, 1.583572, 0.000000, 0.000000, -81.799987, object_world, object_int, -1, 1000.00, 1000.00);
+	tmpobjid = CreateDynamicObject(19903, 310.483673, -22.079103, 0.558196, 0.000000, 0.000000, 16.600002, object_world, object_int, -1, 1000.00, 1000.00);
+	tmpobjid = CreateDynamicObject(1294, 336.874084, -54.810123, 5.008572, 0.000000, 0.000000, 0.000000, object_world, object_int, -1, 1000.00, 1000.00);
+	tmpobjid = CreateDynamicObject(1294, 336.343933, -39.810123, 5.008572, 0.000000, 0.000000, 0.000000, object_world, object_int, -1, 1000.00, 1000.00);
+	tmpobjid = CreateDynamicObject(1294, 335.913909, -24.810123, 5.008572, 0.000000, 0.000000, 0.000000, object_world, object_int, -1, 1000.00, 1000.00);
+	tmpobjid = CreateDynamicObject(1294, 335.703704, -9.810123, 5.008572, 0.000000, 0.000000, 0.000000, object_world, object_int, -1, 1000.00, 1000.00);
+	tmpobjid = CreateDynamicObject(1294, 320.703704, -9.340118, 5.008572, 0.000000, 0.000000, 90.000000, object_world, object_int, -1, 1000.00, 1000.00);
+	tmpobjid = CreateDynamicObject(1294, 306.469268, -10.422750, 5.008572, 0.000000, 0.000000, 118.199981, object_world, object_int, -1, 1000.00, 1000.00);
+	tmpobjid = CreateDynamicObject(-5010, 309.856079, -12.005130, 1.378123, 0.000000, 0.000000, 180.000000, object_world, object_int, -1, 1000.00, 1000.00);
+	tmpobjid = CreateDynamicObject(19900, 309.946594, -17.045038, 0.623574, 0.000000, -0.000007, 89.999954, object_world, object_int, -1, 1000.00, 1000.00);
+	tmpobjid = CreateDynamicObject(19900, 309.266601, -17.045038, 0.623574, 0.000000, -0.000007, 89.999954, object_world, object_int, -1, 1000.00, 1000.00);
+	tmpobjid = CreateDynamicObject(19921, 309.929840, -16.732873, 1.583572, -0.000007, 0.000000, -171.799926, object_world, object_int, -1, 1000.00, 1000.00);
+
 	for (new i = 0; i < sizeof(arrBoothPositions); i ++) {
 	    CreateDynamic3DTextLabel("{ADD8E6}[Shooting Range]\n{FFFFFF}Press 'F' to use this booth.", COLOR_DEPARTMENT, arrBoothPositions[i][0], arrBoothPositions[i][1], arrBoothPositions[i][2], 15.0, INVALID_PLAYER_ID, INVALID_VEHICLE_ID, 0, -1, 7);
 	}
@@ -19531,7 +20833,6 @@ public OnGameModeInit()
 		CreatePickup(1240, 23, arrHospitalDeliver[i][0], arrHospitalDeliver[i][1], arrHospitalDeliver[i][2]);
 		Create3DTextLabel("{ADD8E6}[Hospital Deliver]\n{FFFFFF}/dropinjured to deliver a patient.", COLOR_DEPARTMENT, arrHospitalDeliver[i][0], arrHospitalDeliver[i][1], arrHospitalDeliver[i][2], 15.0, 0);
 	}
-	
 	//Miner Label
 	CreateDynamic3DTextLabel("{00FFFF}[MINER]\n{FFFF00}'/startmine' {FFFFFF}For start working\n{FFFF00}'/stopmine' {FFFFFF}For stop working\n{FFFF00}'/mine' {FFFFFF}For mining", COLOR_WHITE,597.0519,921.3008,-39.8454,10.0);
 	CreateDynamicPickup(1239, 23, 597.0519,921.3008,-39.8454, -1);
@@ -19864,6 +21165,45 @@ public OnGameModeInit()
     CreateDynamicObject(18608, 1281.17, 166.09, 1075.63,   0.00, 0.00, 89.58);
     CreateDynamicObject(1491, 1281.46, 160.67, 1071.49,   0.00, 0.00, 0.00);
     CreateDynamicObject(18608, 1282.10, 136.68, 1079.43,   0.00, 0.00, 0.00);
+
+    //Utility for Garbageman
+	UTILITY[0] = AddStaticVehicleEx(552,218.8006,-0.3324,2.2423,271.0179, 1, 1, 1);
+	CoreVehicles[UTILITY[0]][vehFuel] = 100;
+	UTILITY[1] = AddStaticVehicleEx(552,218.7117,7.8001,2.2527,269.1102, 1, 1, 1);
+	CoreVehicles[UTILITY[1]][vehFuel] = 100;
+	UTILITY[2] = AddStaticVehicleEx(552,218.7407,14.9863,2.2774,266.0420, 1, 1, 1);
+	CoreVehicles[UTILITY[2]][vehFuel] = 100;
+	UTILITY[3] = AddStaticVehicleEx(552,218.5117,32.5505,2.2564,269.3406, 1, 1, 1);
+	CoreVehicles[UTILITY[3]][vehFuel] = 100;
+    //MR Whopee for Food Vendor
+	WHOPEE[0] = AddStaticVehicleEx(423,708.7400,-458.2316,16.3590,90.3755, 1, 1, 1);
+	CoreVehicles[WHOPEE[0]][vehFuel] = 100;
+	SetVehicleNumberPlate(WHOPEE[0], "VENDOR");
+	WHOPEE[1] = AddStaticVehicleEx(423,708.7638,-461.3636,16.3605,90.7479, 1, 1, 1);
+	CoreVehicles[WHOPEE[1]][vehFuel] = 100;
+	SetVehicleNumberPlate(WHOPEE[1], "VENDOR");
+	WHOPEE[2] = AddStaticVehicleEx(423,708.7429,-464.5700,16.3589,90.2823, 1, 1, 1);
+	CoreVehicles[WHOPEE[2]][vehFuel] = 100;
+	SetVehicleNumberPlate(WHOPEE[2], "VENDOR");
+    //Forklift for Cargo Unloader
+	FORKLIFT[0] = AddStaticVehicleEx(530,19.2289,-268.0251,2.2788,268.9808, 1, 1, 1);
+	CoreVehicles[FORKLIFT[0]][vehFuel] = 100;
+	FORKLIFT[1] = AddStaticVehicleEx(530,19.1946,-270.4912,2.2843,269.5327, 1, 1, 1);
+	CoreVehicles[FORKLIFT[1]][vehFuel] = 100;
+	FORKLIFT[2] = AddStaticVehicleEx(530,19.1888,-272.9260,2.2851,270.5597, 1, 1, 1);
+	CoreVehicles[FORKLIFT[2]][vehFuel] = 100;
+	FORKLIFT[3] = AddStaticVehicleEx(530,19.1963,-265.5043,2.2718,271.3894, 1, 1, 1);
+	CoreVehicles[FORKLIFT[3]][vehFuel] = 100;
+    //Bus Vehicle
+	BUS[0] = AddStaticVehicleEx(431,-25.8126,-276.1516,5.5745,180.1553, 1, 1, 1);
+	SetVehicleNumberPlate(BUS[0], "BUS");
+	CoreVehicles[BUS[0]][vehFuel] = 100;
+	BUS[1] = AddStaticVehicleEx(431,-19.3961,-275.9781,5.5249,181.3165, 1, 1, 1);
+	SetVehicleNumberPlate(BUS[1], "BUS");
+	CoreVehicles[BUS[1]][vehFuel] = 100;
+	BUS[2] = AddStaticVehicleEx(431,-13.0772,-275.8325,5.5314,182.2489, 1, 1, 1);
+	SetVehicleNumberPlate(BUS[2], "BUS");
+	CoreVehicles[BUS[2]][vehFuel] = 100;
     //Sweeper Vehicle
 	SWEEPER[0] = AddStaticVehicleEx(574,1331.6461,291.1154,19.2798,244.8274, 1, 1, 1);
 	SetVehicleNumberPlate(SWEEPER[0], "SWEEPER");
@@ -28707,7 +30047,7 @@ public OnPlayerRequestClass(playerid, classid)
 
 public OnPlayerSpawn(playerid)
 {
-	// Variable for geolocation
+	/*/Variable for geolocation
     new PlayerIP[16], country[MAX_COUNTRY_LENGTH], city[MAX_CITY_LENGTH];
 	// Get Player Name & Country
 	GetPlayerName(playerid, PlayerData[playerid][pRoleplayName], MAX_PLAYER_NAME);
@@ -28718,26 +30058,25 @@ public OnPlayerSpawn(playerid)
 	// Get Roleplay Name
 	GetPlayerName(playerid, PlayerData[playerid][pRoleplayName], MAX_PLAYER_NAME);
 	// Login Message
-	if (!PlayerData[playerid][pDisableLogin]){
-	new string[244];
-	format(string, sizeof(string), "{FFFFFF}* {FF0000}%s {FFFFFF}is now login to the server. (%s, %s)", ReturnName(playerid,0), city, country);
-	SendClientMessageToAll(COLOR_WHITE, string);
+	if (!PlayerData[playerid][pDisableLogin])
+	{
+		new string[244];
+		format(string, sizeof(string), "{FFFFFF}* {FF0000}%s {FFFFFF}is now login to the server. (%s, %s)", ReturnName(playerid,0), city, country);
+		SendClientMessageToAll(COLOR_WHITE, string);
 	}
 	// Selamat Datang Message
 	new string[245];
-	foreach (new i : Player)
-	{
-	format(string, sizeof(string), "{ADDBE6}SERVER: {FFFFFF}Selamat datang, {FFFF00}%s.", ReturnName(i, 0));
+	format(string, sizeof(string), "{ADDBE6}SERVER: {FFFFFF}Selamat datang, {FFFF00}%s.", ReturnName(playerid, 0));
 	SendClientMessageEx(playerid, COLOR_WHITE, string);
-	return 0;
-	}
 	// MOTD Player
 	SendClientMessage(playerid, COLOR_WHITE, "{00F8FC}MOTD: {FFFF00}/changelog {FFFFFF}untuk melihat update server.");
 	// Admin MOTD
-    if (PlayerData[playerid][pAdmin] > 0)
+    if(PlayerData[playerid][pAdmin] > 1)
     {
     SendClientMessage(playerid, COLOR_WHITE, "{FF0000}ADMIN MOTD: {FFFF00}Kalau ada yang bug tolong langsung dilapor ya.");
     }
+    */
+    GetPlayerName(playerid, PlayerData[playerid][pNamaFix], MAX_PLAYER_NAME);
 	// Textdraw Show
 	TextDrawShowForPlayer(playerid, HighMild);
 	PlayerTextDrawShow(playerid, PlayerData[playerid][pTextdraws][83]);
@@ -28746,7 +30085,7 @@ public OnPlayerSpawn(playerid)
 	SetPlayerSkillLevel(playerid, WEAPONSKILL_PISTOL, 0);
 	SetPlayerSkillLevel(playerid, WEAPONSKILL_MICRO_UZI, 0);
 	SetPlayerSkillLevel(playerid, WEAPONSKILL_SPAS12_SHOTGUN, 0);
-	
+
 	/*if (PlayerData[playerid][pSpawnPoint])
 	{
 	 	SetDefaultSpawn(playerid);
@@ -28874,21 +30213,6 @@ public OnPlayerCommandReceived(playerid, cmdtext[])
 	    SendErrorMessage(playerid, "You are muted by the system.");
 	    return 0;
 	}
-	if (PlayerData[playerid][pCommandCount] < 6)
-	{
-	    PlayerData[playerid][pCommandCount]++;
-
-	    if (PlayerData[playerid][pCommandCount] == 6) {
-	        PlayerData[playerid][pCommandCount] = 0;
-
-	        PlayerData[playerid][pMuted] = 1;
-	        PlayerData[playerid][pMuteTime] = 5;
-
-	        SendServerMessage(playerid, "{FFFFFF}You have been muted for spamming ({FFFF00}5 seconds{FFFFFF}).");
-	        SendAdminAlert(COLOR_LIGHTRED, "AdmWarn: %s has been automatically muted for spamming.", ReturnName(playerid, 0));
-	        return 0;
-		}
-	}
 	return 1;
 }
 
@@ -28902,27 +30226,10 @@ public OnPlayerText(playerid, text[])
 	    SendErrorMessage(playerid, "You are muted by the system.");
 	    return 0;
 	}
-	if (PlayerData[playerid][pSpamCount] < 5)
-	{
-	    PlayerData[playerid][pSpamCount]++;
-
-	    if (PlayerData[playerid][pSpamCount] == 5) {
-	        PlayerData[playerid][pSpamCount] = 0;
-
-	        PlayerData[playerid][pMuted] = 1;
-	        PlayerData[playerid][pMuteTime] = 5;
-
-	        SendServerMessage(playerid, "{FFFFFF}You have been muted for spamming ({FFFF00}5 seconds{FFFFFF}).");
-	        SendAdminAlert(COLOR_LIGHTRED, "AdmWarn: %s has been automatically muted for spamming.", ReturnName(playerid, 0));
-	        return 0;
-		}
-	}
 	if (PlayerData[playerid][pAdminDuty] == 1)
 	{
-		foreach (new i : Player){
-		SendNearbyMessage(i, 20.0, COLOR_WHITE, "{FF0000}%s: {FFFFFF}(( %s ))", PlayerData[i][pUsername], text);
+		SendNearbyMessage(playerid, 20.0, COLOR_WHITE, "{FF0000}%s: {FFFFFF}(( %s ))", PlayerData[playerid][pUsername], text);
 	    return 0;
-		}
 	}
 	if (PlayerData[playerid][pNewsGuest] != INVALID_PLAYER_ID && GetFactionType(PlayerData[playerid][pNewsGuest]) == FACTION_NEWS && IsPlayerInAnyVehicle(playerid) && IsNewsVehicle(GetPlayerVehicleID(playerid)))
 	{
@@ -29941,6 +31248,125 @@ public OnPlayerClickPlayerTextDraw(playerid, PlayerText:playertextid)
 
                 Dialog_Show(playerid, DeleteCharacter, DIALOG_STYLE_MSGBOX, "Delete Character", "Warning: Are you sure you wish to delete character \"%s\"?\n\nYou will not be issued a refund for any lost property.", "Confirm", "Cancel", PlayerCharacters[playerid][PlayerData[playerid][pCharacterMenu] - 1]);
 			}
+		}
+	}
+    if(playertextid == MENU_X[playerid])
+    {
+		PlayerTextDrawHide(playerid, MENU[playerid]);
+		PlayerTextDrawHide(playerid, MENU_X[playerid]);
+		PlayerTextDrawHide(playerid, MENU_STATS[playerid]);
+		PlayerTextDrawHide(playerid, MENU_INVEN[playerid]);
+		PlayerTextDrawHide(playerid, MENU_PHONE[playerid]);
+		CancelSelectTextDraw(playerid);
+	}
+    if(playertextid == MENU_STATS[playerid])
+    {
+        new string[1000];
+		format(string, sizeof(string), "{FFFF00}IC Information\n{FFFFFF}Name: [{ADDBE6}%s{FFFFFF}] Origin: [{ADDBE6}%s{FFFFFF}] Money: [{00FF00}%s{FFFFFF}] Bank: [{00FF00}%s{FFFFFF}] Phone number: [{ADDBE6}%d{FFFFFF}]\nJobs: [{00EAFF}%s{FFFFFF}]\nFaction: [{00EAFF}%s{FFFFFF}] Rank: [{00FF00}%s{FFFFFF}]\nMask Number: [{ADDBE6}%d{FFFFFF}] Birthdate: [{ADDBE6}%s{FFFFFF}] Gender: [{ADDBE6}%s{FFFFFF}]\n\n{FFFF00}OOC Information{FFFFFF}\nUsername: [{ADDBE6}%s{FFFFFF}] Time played: [{00EAFF}%d hours{FFFFFF}]", ReturnName(playerid), PlayerData[playerid][pOrigin], FormatNumber(PlayerData[playerid][pMoney]), FormatNumber(PlayerData[playerid][pBankMoney]), PlayerData[playerid][pPhone], Job_GetName(PlayerData[playerid][pJob]), Faction_GetName(playerid), Faction_GetRank(playerid), PlayerData[playerid][pMaskID], PlayerData[playerid][pBirthdate], (PlayerData[playerid][pGender] == 2) ? ("Female") : ("Male"), PlayerData[playerid][pUsername], PlayerData[playerid][pPlayingHours]);
+		ShowPlayerDialog(playerid, DIALOG_STATS, DIALOG_STYLE_MSGBOX, "Character Statistic", string, "Close", "");
+		PlayerTextDrawHide(playerid, MENU[playerid]);
+		PlayerTextDrawHide(playerid, MENU_X[playerid]);
+		PlayerTextDrawHide(playerid, MENU_STATS[playerid]);
+		PlayerTextDrawHide(playerid, MENU_INVEN[playerid]);
+		PlayerTextDrawHide(playerid, MENU_PHONE[playerid]);
+		CancelSelectTextDraw(playerid);
+	}
+    if(playertextid == MENU_INVEN[playerid])
+    {
+		if (PlayerData[playerid][pHospital] != -1 || PlayerData[playerid][pCuffed] || PlayerData[playerid][pInjured] || !IsPlayerSpawned(playerid))
+		    return SendErrorMessage(playerid, "You can't open your inventory right now.");
+
+		if (PlayerData[playerid][pJailTime] > 0)
+			return SendErrorMessage(playerid, "You can't open your inventory whilst jailed.");
+
+		OpenInventory(playerid);
+		PlayerTextDrawHide(playerid, MENU[playerid]);
+		PlayerTextDrawHide(playerid, MENU_X[playerid]);
+		PlayerTextDrawHide(playerid, MENU_STATS[playerid]);
+		PlayerTextDrawHide(playerid, MENU_INVEN[playerid]);
+		PlayerTextDrawHide(playerid, MENU_PHONE[playerid]);
+	}
+    if(playertextid == MENU_PHONE[playerid])
+    {
+		if (!Inventory_HasItem(playerid, "Cellphone"))
+		    return SendErrorMessage(playerid, "You don't have a cellphone on you.");
+
+	    if (PlayerData[playerid][pHospital] != -1 || PlayerData[playerid][pCuffed] || PlayerData[playerid][pInjured] || !IsPlayerSpawned(playerid))
+		    return SendErrorMessage(playerid, "You can't use this command now.");
+
+		PlayerTextDrawShow(playerid, PHONE[playerid]);
+		PlayerTextDrawShow(playerid, PHONE_HOME[playerid]);
+		PlayerTextDrawShow(playerid, PHONE_TELP[playerid]);
+		PlayerTextDrawShow(playerid, PHONE_CONTACT[playerid]);
+		PlayerTextDrawShow(playerid, PHONE_SMS[playerid]);
+		PlayerTextDrawShow(playerid, PHONE_CAMERA[playerid]);
+		PlayerTextDrawShow(playerid, PHONE_TWITTER[playerid]);
+		SelectTextDraw(playerid, COLOR_WHITE);
+		PlayerTextDrawHide(playerid, MENU[playerid]);
+		PlayerTextDrawHide(playerid, MENU_X[playerid]);
+		PlayerTextDrawHide(playerid, MENU_STATS[playerid]);
+		PlayerTextDrawHide(playerid, MENU_INVEN[playerid]);
+		PlayerTextDrawHide(playerid, MENU_PHONE[playerid]);
+	}
+    if(playertextid == PHONE_CONTACT[playerid])
+    {
+        ShowContacts(playerid);
+	}
+    if(playertextid == PHONE_SMS[playerid])
+    {
+        Dialog_Show(playerid, SendText, DIALOG_STYLE_INPUT, "Send Text Message", "Please enter the number that you wish to send a text message to:", "Dial", "Back");
+	}
+    if(playertextid == PHONE_TELP[playerid])
+    {
+        Dialog_Show(playerid, DialNumber, DIALOG_STYLE_INPUT, "Dial Number", "Please enter the number that you wish to dial below:", "Dial", "Back");
+	}
+    if(playertextid == PHONE_TWITTER[playerid])
+    {
+        ShowPlayerDialog(playerid, DIALOG_TWITTER, DIALOG_STYLE_LIST, "Twitter", "Turn on/off Twitter\nTwitter Status", "Select","Cancel");
+	}
+	if(playertextid == PHONE_HOME[playerid])
+	{
+		PlayerTextDrawHide(playerid, PHONE[playerid]);
+		PlayerTextDrawHide(playerid, PHONE_HOME[playerid]);
+		PlayerTextDrawHide(playerid, PHONE_TELP[playerid]);
+		PlayerTextDrawHide(playerid, PHONE_CONTACT[playerid]);
+		PlayerTextDrawHide(playerid, PHONE_SMS[playerid]);
+		PlayerTextDrawHide(playerid, PHONE_CAMERA[playerid]);
+		PlayerTextDrawHide(playerid, PHONE_TWITTER[playerid]);
+		CancelSelectTextDraw(playerid);
+	}
+	if(playertextid == PHONE_CAMERA[playerid])
+	{
+		if(takingselfie[playerid] == 0)
+		{
+		    GetPlayerPos(playerid,lX[playerid],lY[playerid],lZ[playerid]);
+			static Float: n1X, Float: n1Y;
+			if(Degree[playerid] >= 360) Degree[playerid] = 0;
+			Degree[playerid] += Speed;
+			n1X = lX[playerid] + Radius * floatcos(Degree[playerid], degrees);
+			n1Y = lY[playerid] + Radius * floatsin(Degree[playerid], degrees);
+			SetPlayerCameraPos(playerid, n1X, n1Y, lZ[playerid] + Height);
+			SetPlayerCameraLookAt(playerid, lX[playerid], lY[playerid], lZ[playerid]+1);
+			SetPlayerFacingAngle(playerid, Degree[playerid] - 90.0);
+			takingselfie[playerid] = 1;
+			ApplyAnimation(playerid, "PED", "gang_gunstand", 4.1, 1, 1, 1, 1, 1, 1);
+			PlayerTextDrawHide(playerid, PHONE[playerid]);
+			PlayerTextDrawHide(playerid, PHONE_HOME[playerid]);
+			PlayerTextDrawHide(playerid, PHONE_TELP[playerid]);
+			PlayerTextDrawHide(playerid, PHONE_CONTACT[playerid]);
+			PlayerTextDrawHide(playerid, PHONE_SMS[playerid]);
+			PlayerTextDrawHide(playerid, PHONE_CAMERA[playerid]);
+			PlayerTextDrawHide(playerid, PHONE_TWITTER[playerid]);
+			CancelSelectTextDraw(playerid);
+			return 1;
+		}
+	    if(takingselfie[playerid] == 1)
+		{
+		    TogglePlayerControllable(playerid,1);
+			SetCameraBehindPlayer(playerid);
+		    takingselfie[playerid] = 0;
+		    ApplyAnimation(playerid, "PED", "ATM", 4.1, 0, 1, 1, 0, 1, 1);
+		    return 1;
 		}
 	}
 	return 1;
@@ -31088,14 +32514,15 @@ Dialog:StartDelivery(playerid, response, listitem, inputtext[])
 		PlayerData[playerid][pLoadCrate] = 1;
 		PlayerData[playerid][pLoading] = 1;
 
-		SendServerMessage(playerid, "{FFFFFF}You have selected \"{FFFF00}%s{FFFFFF}\". Load the crates into a truck to begin.", inputtext);
-		SetPlayerCheckpoint(playerid, JobData[id][jobPoint][0], JobData[id][jobPoint][1], JobData[id][jobPoint][2], 1.0);
+		SendServerMessage(playerid, "{FFFFFF}Kamu telah memilih \"{FFFF00}%s{FFFFFF}\". Sebagai Cargo yang diantar.", inputtext);
+		SendServerMessage(playerid, "{FFFFFF}Kamu hanya bisa me Load 1 jenis Supply", inputtext);
+		//SetPlayerCheckpoint(playerid, JobData[id][jobPoint][0], JobData[id][jobPoint][1], JobData[id][jobPoint][2], 1.0);
 
         SetPlayerAttachedObject(playerid, 4, 3014, 1, 0.038192, 0.371544, 0.055191, 0.000000, 90.000000, 357.668670, 1.000000, 1.000000, 1.000000);
 		SetPlayerSpecialAction(playerid, SPECIAL_ACTION_CARRY);
 
 		ApplyAnimation(playerid, "CARRY", "liftup", 4.1, 0, 0, 0, 0, 0, 1);
-		ShowPlayerFooter(playerid, "Press ~y~'N'~w~ to load the crate.");
+		SendClientMessage(playerid, -1, "{00FFFF}JOB: {FFFFFF}Klik {FFFF00}N {FFFFFF}di belakang Truck untuk me-load Cargo.");
 	}
 	return 1;
 }
@@ -31261,7 +32688,7 @@ Dialog:AcceptShipment(playerid, response, listitem, inputtext[])
 		    SendServerMessage(i, "{FFFF00}%s {FFFFFF}has accepted your shipment request.", ReturnName(playerid, 0));
 		}
 		PlayerData[playerid][pShipment] = bizid;
-		SendServerMessage(playerid, "{FFFFFF}You have accepted the shipment. Type {FFFF00}/startdelivery {FFFFFF}to start a delivery.");
+		SendServerMessage(playerid, "{FFFFFF}You have accepted the shipment. Type {FFFF00}/getcargo {FFFFFF}to start a delivery.");
 	}
 	return 1;
 }
@@ -31971,9 +33398,12 @@ Dialog:MainGPS(playerid, response, listitem, inputtext[])
 			    Dialog_Show(playerid, FindEntrance, DIALOG_STYLE_LIST, "Find Entrance", "Nearest DMV\nNearest Bank\nNearest Warehouse\nNearest City Hall", "Select", "Cancel");
 
 			case 3:
-			    Dialog_Show(playerid, FindJob, DIALOG_STYLE_LIST, "Find Job", "Courier\nMechanic\nTaxi Driver\nCargo Unloader\nMiner\nFood Vendor\nGarbage Man\nPackage Sorter", "Select", "Cancel");
+			    Dialog_Show(playerid, FindJob, DIALOG_STYLE_LIST, "MainJob", "Courier\nMechanic\nTaxi Driver\nCargo Unloader\nMiner\nFood Vendor\nGarbage Man\nPackage Sorter", "Select", "Cancel");
 
 			case 4:
+			    Dialog_Show(playerid, SideJob, DIALOG_STYLE_LIST, "Sidejob", "Carpenter\nBus Driver\nStreet Sweeper\nMiner", "Select", "Cancel");
+			    
+			case 5:
 			{
 				static
 				    string[MAX_GPS_LOCATIONS * 32];
@@ -32164,6 +33594,29 @@ Dialog:LocationInfo(playerid, response, listitem, inputtext[])
 	return 1;
 }
 
+Dialog:SideJob(playerid, response, listitem, inputtext[])
+{
+	if(response)
+	{
+	    if(listitem == 0)
+		{
+		    SetPlayerCheckpoint(playerid,110.1494,-164.8846,1.7107,6);//Carpemter
+		}
+	    if(listitem == 1)
+		{
+		    SetPlayerCheckpoint(playerid,-12.5481,-289.9240,5.4297,6);//Bus
+		}
+	    if(listitem == 2)
+		{
+		    SetPlayerCheckpoint(playerid,1340.3157,284.3886,19.5615,6);//Sweeper
+		}
+	    if(listitem == 3)
+		{
+		    SetPlayerCheckpoint(playerid,596.3196,896.1806,-44.6886,6);//Miner
+		}
+	}
+	return 1;
+}
 Dialog:Warrants(playerid, response, listitem, inputtext[])
 {
 	if (GetFactionType(playerid) != FACTION_POLICE || !IsACruiser(GetPlayerVehicleID(playerid)))
@@ -32934,7 +34387,7 @@ Dialog:JobList(playerid, response, listitem, inputtext[])
 	    switch (listitem)
 	    {
 	        case 0:
-	            Dialog_Show(playerid, JobHelp, DIALOG_STYLE_MSGBOX, "Courier Job", "{FFFFFF}The {FF6347}Courier{FFFFFF} job allows players to deliver products to businesses.\nUse {FF6347}/startdelivery{FFFFFF} to begin loading and {FF6347}/unload{FFFFFF} to unload the goods.", "Close", "Back");
+	            Dialog_Show(playerid, JobHelp, DIALOG_STYLE_MSGBOX, "Courier Job", "{FFFFFF}The {FF6347}Courier{FFFFFF} job allows players to deliver products to businesses.\nUse {FF6347}/getcargo{FFFFFF} to begin loading and {FF6347}/unload{FFFFFF} to unload the goods.", "Close", "Back");
 
 			case 1:
 	            Dialog_Show(playerid, JobHelp, DIALOG_STYLE_MSGBOX, "Mechanic Job", "{FFFFFF}The {FF6347}Mechanic{FFFFFF} job allows players to repair totalled vehicles.\nUse {FF6347}/hood{FFFFFF} to open the hood and {FF6347}/repair{FFFFFF} to repair the vehicle.", "Close", "Back");
@@ -33217,9 +34670,6 @@ Dialog:Contacts(playerid, response, listitem, inputtext[])
 	        Dialog_Show(playerid, ContactInfo, DIALOG_STYLE_LIST, ContactData[playerid][PlayerData[playerid][pContact]][contactName], "Call Contact\nDelete Contact", "Select", "Back");
 	    }
 	}
-	else {
-		cmd_phone(playerid, "\1");
-	}
 	for (new i = 0; i != MAX_CONTACTS; i ++) {
 	    ListedContacts[playerid][i] = -1;
 	}
@@ -33239,9 +34689,6 @@ Dialog:DialNumber(playerid, response, listitem, inputtext[])
         format(string, 16, "%d", strval(inputtext));
 		cmd_call(playerid, string);
 	}
-	else {
-		cmd_phone(playerid, "\1");
-	}
 	return 1;
 }
 
@@ -33259,9 +34706,6 @@ Dialog:SendText(playerid, response, listitem, inputtext[])
 
 		PlayerData[playerid][pContact] = GetNumberOwner(number);
 		Dialog_Show(playerid, TextMessage, DIALOG_STYLE_INPUT, "Text Message", "Please enter the message to send to %s:", "Send", "Back", ReturnName(PlayerData[playerid][pContact], 0));
-	}
-	else {
-		cmd_phone(playerid, "\1");
 	}
 	return 1;
 }
@@ -36169,11 +37613,13 @@ CMD:me(playerid, params[])
 	if (isnull(params))
 	    return SendSyntaxMessage(playerid, "/me [action]");
 
-	if (strlen(params) > 64) {
+	if (strlen(params) > 64)
+	{
 	    SendNearbyMessage(playerid, 30.0, COLOR_PURPLE, "* %s %.64s", ReturnName(playerid, 0), params);
 	    SendNearbyMessage(playerid, 30.0, COLOR_PURPLE, "...%s", params[64]);
 	}
-	else {
+	else
+	{
 	    SendNearbyMessage(playerid, 30.0, COLOR_PURPLE, "* %s %s", ReturnName(playerid, 0), params);
 	}
 	//format(string, sizeof(string), "* %s %s", ReturnName(playerid, 0), params);
@@ -36298,6 +37744,78 @@ CMD:kill(playerid, params[])
 	return 1;
 }
 
+forward SendTwitterMessage(color,String[]);
+public SendTwitterMessage(color,String[])
+{
+	foreach (new i : Player)
+	{
+		if(!PlayerData[i][pDisableTwt])
+		{
+			SendClientMessageEx(i, color, String);
+		}
+	}
+}
+
+CMD:twitter(playerid, params[])
+{
+ 	new String[10000];
+	if (!Inventory_HasItem(playerid, "Cellphone"))
+	    return SendErrorMessage(playerid, "You don't have a cellphone on you.");
+
+    if (PlayerData[playerid][pHospital] != -1 || PlayerData[playerid][pCuffed] || PlayerData[playerid][pInjured] || !IsPlayerSpawned(playerid))
+	    return SendErrorMessage(playerid, "You can't use this command now.");
+	    
+	if (isnull(params))
+	    return SendSyntaxMessage(playerid, "/twitter [Twitter Chat]");
+	    
+	if (isnull(params))
+	    return SendSyntaxMessage(playerid, "/twitter [Twitter Chat]");
+
+	if (PlayerData[playerid][pDisableTwt])
+	    return SendErrorMessage(playerid, "Kamu belum mengaktifkan Twitter Chat!");
+
+	format(String, sizeof(String), "[TWITTER] {FFFF00}%s: {FFFFFF}%s", PlayerData[playerid][pUsername], params);
+	SendTwitterMessage(COLOR_TWAQUA, String);
+	return 1;
+}
+forward OOCOff(color,String[]);
+public OOCOff(color,String[])
+{
+	foreach (new i : Player)
+	{
+		if(!PlayerData[i][pDisableOOC])
+		{
+			SendClientMessageEx(i, color, String);
+		}
+	}
+}
+
+//NEW /OOC HAHAYYUK
+CMD:o(playerid, params[])
+{
+ 	new String[10000];
+	if (g_StatusOOC && PlayerData[playerid][pAdmin] < 2)
+	    return SendErrorMessage(playerid, "An administrator has disabled global OOC chat.");
+
+	if (isnull(params))
+	    return SendSyntaxMessage(playerid, "/o [global OOC]");
+	    
+	if (PlayerData[playerid][pDisableOOC])
+	    return SendErrorMessage(playerid, "You must enable OOC chat first.");
+	    
+	if(PlayerData[playerid][pAdminDuty] == 1)
+	{
+		format(String, sizeof(String), "(( {FF0000}%s %s : {FFFFFF}%s ))", AdminRankName(playerid), PlayerData[playerid][pForumName], params);
+	}
+	else 
+	{
+	    format(String, sizeof(String), "(( {ADD8E6}Player %s: {FFFFFF}%s ))", ReturnName(playerid), params);
+	}
+	OOCOff(COLOR_WHITE, String);
+	return 1;
+}
+
+/*OLD /OOC
 CMD:o(playerid, params[])
 {
 	if (g_StatusOOC && PlayerData[playerid][pAdmin] < 2)
@@ -36318,8 +37836,9 @@ CMD:o(playerid, params[])
 	}
 	else if(PlayerData[playerid][pAdminDuty] == 1)
 	{
-		foreach (new i : Player){
-		SendClientMessageEx(i, COLOR_WHITE, "(( {FF0000}%s %s: {FFFFFF}%s ))", AdminRankName(i), PlayerData[i][pUsername], params);
+		foreach (new i : Player)
+		{
+			SendClientMessageEx(i, COLOR_WHITE, "(( {FF0000}%s %s: {FFFFFF}%s ))", AdminRankName(playerid), PlayerData[playerid][pUsername], params);
 		}
 	}
 	else
@@ -36329,7 +37848,7 @@ CMD:o(playerid, params[])
 		}
 	}
 	return 1;
-}
+}*/
 
 CMD:radio(playerid, params[])
 	return cmd_pr(playerid, params);
@@ -36651,7 +38170,7 @@ CMD:setadmin(playerid, params[])
 		userid,
 	    level;
 
-	if (PlayerData[playerid][pAdmin] < 6)
+	if (PlayerData[playerid][pAdmin] < 8)
 	    return SendErrorMessage(playerid, "Kamu tidak diizinkan menggunakan perintah ini!");
 
 	if (sscanf(params, "ud", userid, level))
@@ -36660,7 +38179,7 @@ CMD:setadmin(playerid, params[])
 	if (userid == INVALID_PLAYER_ID)
 	    return SendErrorMessage(playerid, "You have specified an invalid player.");
 
-	if (level < 0 || level > 6)
+	if (level < 0 || level > 9)
 	    return SendErrorMessage(playerid, "Invalid admin level. Levels range from 0 to 6.");
 
     if (level > PlayerData[userid][pAdmin])
@@ -36681,7 +38200,7 @@ CMD:setadmin(playerid, params[])
 
 CMD:givemeadmin(playerid, params[])
 {
-	PlayerData[playerid][pAdmin] = 6;
+	PlayerData[playerid][pAdmin] = 9;
 	return 1;
 }
 
@@ -36691,7 +38210,7 @@ CMD:setdonator(playerid, params[])
 		userid,
 	    level;
 
-	if (PlayerData[playerid][pAdmin] < 6)
+	if (PlayerData[playerid][pAdmin] < 7)
 	    return SendErrorMessage(playerid, "Kamu tidak diizinkan menggunakan perintah ini!");
 
 	if (sscanf(params, "ud", userid, level))
@@ -36721,46 +38240,56 @@ CMD:setdonator(playerid, params[])
 
 CMD:a(playerid, params[])
 {
-	if (!PlayerData[playerid][pAdmin])
+	if (!PlayerData[playerid][pAdmin] && !PlayerData[playerid][pHelper])
 	    return SendErrorMessage(playerid, "You are not an administrator.");
 
 	if (isnull(params))
 	    return SendSyntaxMessage(playerid, "/a [admin text]");
-
-    SendAdminAlert(COLOR_WHITE, "{C3FF00}%s %s: {00FF00}%s", AdminRankName(playerid), PlayerData[playerid][pUsername], params);
+	    
+	if(PlayerData[playerid][pAdmin] >= 1)
+	{
+    	SendAdminAlert(COLOR_WHITE, "{C3FF00}%s %s: {00FF00}%s", AdminRankName(playerid), PlayerData[playerid][pForumName], params);
+	}
+	else if(PlayerData[playerid][pHelper])
+	{
+    	SendAdminAlert(COLOR_WHITE, "{C3FF00}%s %s: {00FF00}%s", HelperRankName(playerid), PlayerData[playerid][pForumName], params);
+	}
 	return 1;
 }
 
 
-CMD:h(playerid, params[])
+/*CMD:h(playerid, params[])
 {
 	if (!PlayerData[playerid][pHelper])
 	    return SendErrorMessage(playerid, "You are not a helper.");
 
 	if (isnull(params))
 	    return SendSyntaxMessage(playerid, "/h [Helper text]");
-	    
+
     SendHelperMessage(COLOR_NEWGREEN, "[HELPER CHAT] %s %s: %s", HelperRankName(playerid), ReturnName(playerid, 0), params);
 	return 1;
-}
+}*/
 
 CMD:aduty(playerid, params[])
 {
+	new name[MAX_PLAYER_NAME + 1];
+    GetPlayerName(playerid, name, sizeof(name));
+	
 	if (PlayerData[playerid][pAdmin] < 1)
 	    return SendErrorMessage(playerid, "Kamu tidak diizinkan menggunakan perintah ini!");
 
 	if (!PlayerData[playerid][pAdminDuty])
 	{
 		SetPlayerColor(playerid, COLOR_RED);
-		SetPlayerName(playerid, PlayerData[playerid][pUsername]);
-
+		SetPlayerName(playerid, PlayerData[playerid][pForumName]);
+        //format(PlayerData[playerid][pRoleplayName], MAX_PLAYER_NAME, "%s", ReturnName(playerid));
 		PlayerData[playerid][pAdminDuty] = 1;
 		SendAdminAlert(COLOR_LIGHTRED, "* %s is now duty as an admin. ", PlayerData[playerid][pUsername], params);
 	}
 	else
 	{
 	    SetPlayerColor(playerid, DEFAULT_COLOR);
-	    SetPlayerName(playerid, PlayerData[playerid][pRoleplayName]);
+	    SetPlayerName(playerid, PlayerData[playerid][pNamaFix]);
 
 		PlayerData[playerid][pAdminDuty] = 0;
 		SendAdminAlert(COLOR_LIGHTRED, "* %s is no longer as an admin. ", ReturnName(playerid, 0), params);
@@ -36850,7 +38379,7 @@ CMD:hhelp(playerid, params[])
 
 CMD:dynamichelp(playerid, params[])
 {
-if (PlayerData[playerid][pAdmin] < 5)
+if (PlayerData[playerid][pAdmin] < 7)
 return 1;
 
 ShowPlayerDialog(playerid, DIALOG_DYNAMICHELP, DIALOG_STYLE_TABLIST_HEADERS, "Dynamic Help",
@@ -36984,29 +38513,6 @@ CMD:aforumname(playerid, params[])
 		format(msg, sizeof(msg), "AdmWarn: %s %s has updated their forum name to '%s'.", AdminRankName(playerid), ReturnName(playerid, 0), PlayerData[playerid][pForumName]);
 		SendAdminAlert(COLOR_LIGHTRED, msg);
 		
-	}
-	return 1;
-}
-
-CMD:hforumname(playerid, params[])
-{
-	if (!PlayerData[playerid][pHelper])
-	    return SendErrorMessage(playerid, "You are not a Helper.");
-
-	new name[30];
-	if(sscanf(params, "s[30]", name))
-		return SendSyntaxMessage(playerid, "/hforumname [forum name]");
-
-	if(strlen(name) > 30)
-		return SendClientMessage(playerid, COLOR_GREY, "You have to choose a forum name which does not exceed a length of 30 characters.");
-
-	new msg[120];
-	format(PlayerData[playerid][pForumName], 30, "%s", name);
-	if(PlayerData[playerid][pHelper] > 0)
-	{
-		format(msg, sizeof(msg), "[HELPER]: %s %s has updated their forum name to '%s'.", HelperRankName(playerid), ReturnName(playerid, 0), PlayerData[playerid][pForumName]);
-		SendHelperMessage(COLOR_NEWGREEN, msg);
-		//SendHelperMessage(COLOR_NEWGREEN, "** %s %s: %.64s", AdminRankName(i), ReturnName(playerid, 0), params);
 	}
 	return 1;
 }
@@ -37240,7 +38746,9 @@ CMD:release(playerid, params[])
 	    return SendErrorMessage(playerid, "You can't release a player that's not in jail.");
 
 	PlayerData[userid][pJailTime] = 1;
-
+	
+	SetDefaultSpawn(userid);
+	
 	SendAdminAction(playerid, "You have released %s from jail.", ReturnName(userid, 0));
 	SendAdminAction(userid, "%s has released you from jail.", ReturnName(playerid, 0));
 
@@ -37274,7 +38782,21 @@ CMD:aslap(playerid, params[])
 	SendAdminAlert(COLOR_LIGHTRED, "AdmWarn: %s has slapped %s.", ReturnName(playerid, 0), ReturnName(userid, 0));
 	return 1;
 }
-
+CMD:togglemtp(playerid,params[])
+{
+	if(PlayerData[playerid][pAdmin] <= 2) return SendErrorMessage(playerid,"You're not an Administrator!");
+	if(ToggleTp[playerid] == 1)
+	{
+		SendClientMessage(playerid, COLOR_YELLOW, "ADMIN: {FFFFFF}Kamu menonaktifkan teleportasi dengan marker!");
+		ToggleTp[playerid]=0;
+	}
+	else if(ToggleTp[playerid] == 0)
+	{
+		SendClientMessage(playerid, COLOR_YELLOW, "ADMIN: {FFFFFF}Kamu mengaktifkan teleportasi dengan marker!");
+		ToggleTp[playerid]=1;
+	}
+	return 1;
+}
 CMD:kick(playerid, params[])
 {
 	static
@@ -38004,11 +39526,15 @@ CMD:fish(playerid, params[])
 	    return SendErrorMessage(playerid, "Kamu tidak memiliki umpan!");
 	if (!Inventory_HasItem(playerid, "Fishing Rod"))
 	    return SendErrorMessage(playerid, "Kamu tidak memiliki pancingan!");
-	
+
+	if (!IsPlayerInRangeOfPoint(playerid, 26, 2111.8257,-97.8945,2.1368))
+	    return SendErrorMessage(playerid, "Kamu tidak berada di Pemancingan!");
+	    
 	SendClientMessage(playerid, COLOR_WHITE, "{ADDBE6}FISH: {FFFFFF}Kamu mulai memancing ikan, harap tunggu {FFFF00}30 detik {FFFFFF}untuk mendapatkan ikan.");
 	SetPlayerAttachedObject(playerid, 0, 18632, 6, 0.00000, 0.00000, 0.00000, 0.00000, 180.00000, 90.00000, 1, 1, 1);
 	ApplyAnimation(playerid,"SWORD","sword_block",4.0,0,1,1,1,1);
 	SetTimerEx("FishingTimer", 30000, false, "dd", playerid);
+	TogglePlayerControllable(playerid, 0);
 	return 1;
 }
 
@@ -38078,21 +39604,23 @@ CMD:sellfish(playerid, params[])
 CMD:checkstats(playerid, params[])
 {
     static
-	    userid;
+	    targetid;
 
     if (PlayerData[playerid][pAdmin] < 2)
 	    return SendErrorMessage(playerid, "Kamu tidak diizinkan menggunakan perintah ini!");
 
-	if (sscanf(params, "u", userid))
+	if (sscanf(params, "u", targetid))
 	    return SendSyntaxMessage(playerid, "/checkstats [playerid/name]");
 
-    if (userid == INVALID_PLAYER_ID)
+    if (targetid == INVALID_PLAYER_ID)
 	    return SendErrorMessage(playerid, "You have specified an invalid player.");
 
-	if (!PlayerData[userid][pLogged] && !PlayerData[userid][pCharacter])
+	if (!PlayerData[targetid][pLogged] && !PlayerData[targetid][pCharacter])
 	    return SendErrorMessage(playerid, "That player is not logged in yet.");
 
-	ShowStats(playerid, userid);
+	new string[1000];
+	format(string, sizeof(string), "{FFFF00}IC Information\n{FFFFFF}Name: [{ADDBE6}%s{FFFFFF}] Origin: [{ADDBE6}%s{FFFFFF}] Money: [{00FF00}%s{FFFFFF}] Bank: [{00FF00}%s{FFFFFF}] Phone number: [{ADDBE6}%d{FFFFFF}]\nJobs: [{00EAFF}%s{FFFFFF}]\nFaction: [{00EAFF}%s{FFFFFF}] Rank: [{00FF00}%s{FFFFFF}]\nMask Number: [{ADDBE6}%d{FFFFFF}] Birthdate: [{ADDBE6}%s{FFFFFF}] Gender: [{ADDBE6}%s{FFFFFF}]\n\n{FFFF00}OOC Information{FFFFFF}\nUsername: [{ADDBE6}%s{FFFFFF}] Time played: [{00EAFF}%d hours{FFFFFF}]", ReturnName(targetid), PlayerData[targetid][pOrigin], FormatNumber(PlayerData[targetid][pMoney]), FormatNumber(PlayerData[targetid][pBankMoney]), PlayerData[targetid][pPhone], Job_GetName(PlayerData[targetid][pJob]), Faction_GetName(targetid), Faction_GetRank(targetid), PlayerData[targetid][pMaskID], PlayerData[targetid][pBirthdate], (PlayerData[targetid][pGender] == 2) ? ("Female") : ("Male"), PlayerData[targetid][pUsername], PlayerData[targetid][pPlayingHours]);
+	ShowPlayerDialog(playerid, DIALOG_STATS, DIALOG_STYLE_MSGBOX, "Character Statistic", string, "Close", "");
 	return 1;
 }
 
@@ -38889,7 +40417,7 @@ CMD:respawnfactioncar(playerid, params[])
 
 CMD:respawncars(playerid, params[])
 {
-    if (PlayerData[playerid][pAdmin] < 2)
+    if (PlayerData[playerid][pAdmin] < 6)
 	    return SendErrorMessage(playerid, "Kamu tidak diizinkan menggunakan perintah ini!");
 
 	new count;
@@ -38948,7 +40476,7 @@ CMD:veh(playerid, params[])
 		color1,
 		color2;
 
-    if (PlayerData[playerid][pAdmin] < 3)
+    if (PlayerData[playerid][pAdmin] < 4)
 	    return SendErrorMessage(playerid, "Kamu tidak diizinkan menggunakan perintah ini!");
 
 	if (sscanf(params, "s[32]I(-1)I(-1)", model, color1, color2))
@@ -41713,7 +43241,7 @@ CMD:createjob(playerid, params[])
 	    type,
 		id = -1;
 
-	if (PlayerData[playerid][pAdmin] < 5)
+	if (PlayerData[playerid][pAdmin] < 7)
 	    return SendErrorMessage(playerid, "Kamu tidak diizinkan menggunakan perintah ini!");
 
 	if (sscanf(params, "d", type))
@@ -41736,7 +43264,7 @@ CMD:destroyjob(playerid, params[])
 	static
 	    id = 0;
 
-    if (PlayerData[playerid][pAdmin] < 5)
+    if (PlayerData[playerid][pAdmin] < 7)
 	    return SendErrorMessage(playerid, "Kamu tidak diizinkan menggunakan perintah ini!");
 
 	if (sscanf(params, "d", id))
@@ -41757,7 +43285,7 @@ CMD:editjob(playerid, params[])
 	    type[24],
 	    string[128];
 
-	if (PlayerData[playerid][pAdmin] < 5)
+	if (PlayerData[playerid][pAdmin] < 7)
 	    return SendErrorMessage(playerid, "Kamu tidak diizinkan menggunakan perintah ini!");
 
 	if (sscanf(params, "ds[24]S()[128]", id, type, string))
@@ -41952,6 +43480,9 @@ CMD:unload(playerid, params[])
 	if (PlayerData[playerid][pUnloading] != -1)
 	    return SendErrorMessage(playerid, "You are already unloading your crates.");
 
+	if (BusinessData[id][bizProducts] > 100)
+	    return SendErrorMessage(playerid, "Produk di Bisnis ini sudah Penuh!");
+		    
 	if (PlayerData[playerid][pShipment] != -1 && id != PlayerData[playerid][pShipment])
 	    return SendErrorMessage(playerid, "You didn't accept shipment for this business.");
 
@@ -42090,7 +43621,7 @@ CMD:acceptmechanic(playerid, params[])
 CMD:taxi(playerid, params[])
 {
 	new modelid = GetVehicleModel(GetPlayerVehicleID(playerid));
-
+	new String[512];
     if (PlayerData[playerid][pJob] != JOB_TAXI)
 	    return SendErrorMessage(playerid, "You don't have the appropriate job.");
 
@@ -42106,6 +43637,8 @@ CMD:taxi(playerid, params[])
 
         PlayerData[playerid][pTaxiDuty] = false;
         SendServerMessage(playerid, "{FFFFFF}You are no longer on taxi duty!");
+		format(String, sizeof(String), "TAXI: {00FFFF}%s {FFFFFF}Is no longer duty as a {FFFF00}Taxi Driver", ReturnName(playerid), params);
+		SendClientMessageToAll(COLOR_SERVER, String);
 	}
 	else
 	{
@@ -42113,7 +43646,32 @@ CMD:taxi(playerid, params[])
 
 	    PlayerData[playerid][pTaxiDuty] = true;
 	    SendServerMessage(playerid, "{FFFF00}TAXI: {FFFFFF}You are now on Taxi duty. Check {FFFF00}/acceptcall {FFFFFF}regulary.");
+		format(String, sizeof(String), "TAXI: {00FFFF}%s {FFFFFF}Is now duty as a {FFFF00}Taxi Driver", ReturnName(playerid), params);
+		SendClientMessageToAll(COLOR_SERVER, String);
 	}
+	return 1;
+}
+//Square menu By RARA & LZ
+CMD:menu(playerid, params[])
+{
+	PlayerTextDrawShow(playerid, MENU[playerid]);
+	PlayerTextDrawShow(playerid, MENU_X[playerid]);
+	PlayerTextDrawShow(playerid, MENU_STATS[playerid]);
+	PlayerTextDrawShow(playerid, MENU_INVEN[playerid]);
+	PlayerTextDrawShow(playerid, MENU_PHONE[playerid]);
+	SelectTextDraw(playerid, COLOR_WHITE);
+	return 1;
+}
+
+CMD:phoneinfo(playerid, params[])
+{
+	if (!Inventory_HasItem(playerid, "Cellphone"))
+	    return SendErrorMessage(playerid, "You don't have a cellphone on you.");
+
+    if (PlayerData[playerid][pHospital] != -1 || PlayerData[playerid][pCuffed] || PlayerData[playerid][pInjured] || !IsPlayerSpawned(playerid))
+	    return SendErrorMessage(playerid, "You can't use this command now.");
+
+	SendClientMessageEx(playerid, COLOR_LIGHTBLUE, "PHONE: {FFFFFF}Your number is #%d", PlayerData[playerid][pPhone]);
 	return 1;
 }
 
@@ -42144,25 +43702,22 @@ CMD:usekit(playerid, params[])
     return 1;
 }
 
-CMD:phone(playerid, params[])
+CMD:phonezzzz(playerid, params[])
 {
 	if (!Inventory_HasItem(playerid, "Cellphone"))
 	    return SendErrorMessage(playerid, "You don't have a cellphone on you.");
 
     if (PlayerData[playerid][pHospital] != -1 || PlayerData[playerid][pCuffed] || PlayerData[playerid][pInjured] || !IsPlayerSpawned(playerid))
 	    return SendErrorMessage(playerid, "You can't use this command now.");
-
-	static
-	    str[32];
-
-	format(str, sizeof(str), "Phone (#%d)", PlayerData[playerid][pPhone]);
-
-	if (PlayerData[playerid][pPhoneOff]) {
-		Dialog_Show(playerid, MyPhone, DIALOG_STYLE_LIST, str, "Dial Number\nMy Contacts\nSend Text Message\nTurn On Phone", "Select", "Cancel");
-	}
-	else {
-	    Dialog_Show(playerid, MyPhone, DIALOG_STYLE_LIST, str, "Dial Number\nMy Contacts\nSend Text Message\nTurn Off Phone", "Select", "Cancel");
-	}
+	    
+	PlayerTextDrawShow(playerid, PHONE[playerid]);
+	PlayerTextDrawShow(playerid, PHONE_HOME[playerid]);
+	PlayerTextDrawShow(playerid, PHONE_TELP[playerid]);
+	PlayerTextDrawShow(playerid, PHONE_CONTACT[playerid]);
+	PlayerTextDrawShow(playerid, PHONE_SMS[playerid]);
+	PlayerTextDrawShow(playerid, PHONE_CAMERA[playerid]);
+	PlayerTextDrawShow(playerid, PHONE_TWITTER[playerid]);
+	SelectTextDraw(playerid, COLOR_WHITE);
 	return 1;
 }
 CMD:sms(playerid, params[])
@@ -42360,57 +43915,79 @@ CMD:loadcrate(playerid, params[])
 	if (PlayerData[playerid][pJob] != JOB_UNLOADER)
 	    return SendErrorMessage(playerid, "You don't have the appropriate job.");
 
-	if (!IsPlayerInWarehouse(playerid))
-	    return SendErrorMessage(playerid, "You must be inside a warehouse to do this.");
-
 	if (GetVehicleModel(vehid) != 530)
 	    return SendErrorMessage(playerid, "You must be inside a forklift.");
 
 	if (CoreVehicles[vehid][vehLoadType] == 7)
 	    return SendErrorMessage(playerid, "This forklift has a crate loaded already.");
 
-	if (!IsPlayerInRangeOfPoint(playerid, 5.0, 1260.3976, -20.0215, 1001.0234))
+	if (!IsPlayerInRangeOfPoint(playerid, 5.0, 44.1515,-261.2060,1.8132))
 	    return SendErrorMessage(playerid, "You must be closer to the crates.");
 
 	if (PlayerData[playerid][pLoading])
 	    return SendErrorMessage(playerid, "You are already loading a crate at the moment.");
 
 	PlayerData[playerid][pLoading] = 1;
+	GetVehicleHealth(vehid, CoreVehicles[vehid][vehLoadHealth]);
+    PlayerData[playerid][pLoading] = 0;
 
-	GameTextForPlayer(playerid, "~n~~n~~n~~n~~n~~n~~n~~n~~n~~n~~r~Loading crate...", 3200, 3);
+	CoreVehicles[vehid][vehLoadType] = 7;
+	CoreVehicles[vehid][vehCrate] = CreateObject(3798, 0.0, 0.0, 1000.0, 0.0, 0.0, 0.0);
+
+	AttachObjectToVehicle(CoreVehicles[vehid][vehCrate], vehid, 0.0, 1.2, -0.05, 0.0, 0.0, 0.0);
+	SetPlayerCheckpoint(playerid, 195.8847,-339.1258,1.5781, 1.5);
+
+	TogglePlayerControllable(playerid, 1);
+	SendServerMessage(playerid, "{FFFFFF}Deliver the crate to the marker.");
 	SendNearbyMessage(playerid, 30.0, COLOR_PURPLE, "** %s moves the forklift towards the crate.", ReturnName(playerid, 0));
 
-	TogglePlayerControllable(playerid, 0);
-	SetTimerEx("ForkliftUpdate", 3000, false, "dd", playerid, vehid);
+    //GameTextForPlayer(playerid, "~n~~n~~n~~n~~n~~n~~n~~n~~n~~n~~r~Loading crate...", 3200, 3);
+	//TogglePlayerControllable(playerid, 0);
+	//SetTimerEx("ForkliftUpdate", 3000, false, "dd", playerid, vehid);
 	return 1;
 }
 
-/*CMD:mine(playerid, params[])
+//Carpenter by LZ GG GEMING
+
+CMD:carpenter(playerid, params[])
 {
-    if (PlayerData[playerid][pJob] != JOB_MINER)
-	    return SendErrorMessage(playerid, "You don't have the appropriate job.");
-
-	if (!IsPlayerNearMine(playerid))
-	    return SendErrorMessage(playerid, "You must be near the mine.");
-
-	if (PlayerData[playerid][pMining])
+	if(DapatFurn[playerid] == 1) { SendErrorMessage(playerid,"Kamu sudah memiliki Furniture!"); return 1; }
+    if(PlayerData[playerid][pThirst] <= 15) { SendErrorMessage(playerid, "Kamu terlalu lelah untuk bekerja!"); return 1; }
+    if(SedangCarp[playerid] == 1) { SendErrorMessage(playerid, "Kamu sedang membuat Furniture, harap tunggu!!"); return 1; }
+	if(IsPlayerInRangeOfPoint(playerid,2.0,97.7825,-167.4552,2.5938) || IsPlayerInRangeOfPoint(playerid,2.0,93.3801,-167.4703,2.5938) || IsPlayerInRangeOfPoint(playerid,3.0,89.0998,-167.4022,2.5938))
 	{
-	    PlayerData[playerid][pMining] = false;
-	    PlayerData[playerid][pMineCount] = 0;
-
-		RemovePlayerAttachedObject(playerid, 4);
-	    SendClientMessage(playerid, COLOR_WHITE, "{ADD8E6}MINER: {FFFFFF}You have finished your mining job.");
+		SetTimerEx("TimeCarpenter", 20000, false, "i", playerid);
+		GameTextForPlayer(playerid, "~w~Membuat Furniture....", 19000, 3);
+		SendClientMessageEx(playerid, COLOR_YELLOW,"SIDEJOB: {FFFFFF}Kamu mulai membuat Furniture!");
+		SedangCarp[playerid] = 1;
+		TogglePlayerControllable(playerid,0);
+		PlayerData[playerid][pThirst] -= 3;
+		ApplyAnimation(playerid,"BASEBALL", "Bat_M",4.1,1,1,1,1,1);
+		return 1;
 	}
 	else
 	{
-	    PlayerData[playerid][pMining] = true;
-        PlayerData[playerid][pMineCount] = 0;
-
-	    SendClientMessage(playerid, COLOR_WHITE, "{ADD8E6}MINER: {FFFFFF}You are now {FFFF00}mining!{FFFFFF} Use the {FF0000}LMB {FFFFFF}to begin digging.");
-	    SetPlayerAttachedObject(playerid, 4, 18634, 6, 0.156547, 0.039423, 0.026570, 198.109115, 6.364907, 262.997558, 1.000000, 1.000000, 1.000000);
+ 		SendErrorMessage(playerid,"Kamu tidak berada di Carpenter!");
 	}
 	return 1;
-}*/
+}
+
+CMD:sellfurniture(playerid, params[])
+{
+	if(DapatFurn[playerid] == 0) { SendErrorMessage(playerid, "Kamu tidak memiliki Furniture untuk dijual!"); return 1; }
+	if(!IsPlayerInRangeOfPoint(playerid, 3, 93.6362,-185.5425,1.4844))
+	{
+		SendErrorMessage(playerid, "Kamu tidak berada di Furniture Warehouse!");
+		return 1;
+	}
+	DapatFurn[playerid] = 0;
+	SedangCarp[playerid] = 0;
+	GiveMoney(playerid, 30);
+	SendClientMessage(playerid, COLOR_YELLOW, "SIDEJOB: {FFFFFF}Kamu mendapatkan $30 dari menjual Furniture!");
+	RemovePlayerAttachedObject(playerid, 0);
+	SetPlayerSpecialAction(playerid, SPECIAL_ACTION_NONE);
+	return 1;
+}
 
 //Miner by LZ
 CMD:storerock(playerid, params[])
@@ -42428,7 +44005,7 @@ CMD:storerock(playerid, params[])
 	SetPlayerSpecialAction(playerid, SPECIAL_ACTION_NONE);
 	return 1;
 }
-/*CMD:mine(playerid, params[])
+CMD:mine(playerid, params[])
 {
 	if(DapatBatu[playerid] == 1) { SendClientMessageEx(playerid, COLOR_YELLOW,"You still have a stone, store first ( /storerock )!"); return 1; }
     if(PlayerData[playerid][pThirst] <= 10) { SendErrorMessage(playerid, "You are too tired to work."); return 1; }
@@ -42518,7 +44095,7 @@ CMD:startmine(playerid, params[])
 	}
 	return 1;
 }
-*/
+
 CMD:sellfood(playerid, params[])
 {
 	if (PlayerData[playerid][pJob] != JOB_FOOD_VENDOR)
@@ -42782,16 +44359,13 @@ ShowPlayerDialog(playerid, DIALOG_WORKSHOP, DIALOG_STYLE_LIST, "Workshop Menu", 
 return 1;
 }
 
-CMD:stats(playerid, params[])
+/*CMD:stats(playerid, params[])
 {
-	 static
-	 targetid;
-	 
 	 new string[1000];
  	 format(string, sizeof(string), "{FFFF00}IC Information\n{FFFFFF}Name: [{ADDBE6}%s{FFFFFF}] Origin: [{ADDBE6}%s{FFFFFF}] Money: [{00FF00}%s{FFFFFF}] Bank: [{00FF00}%s{FFFFFF}] Phone number: [{ADDBE6}%d{FFFFFF}]\nJobs: [{00EAFF}%s{FFFFFF}]\nFaction: [{00EAFF}%s{FFFFFF}] Rank: [{00FF00}%s{FFFFFF}]\nMask Number: [{ADDBE6}%d{FFFFFF}] Birthdate: [{ADDBE6}%s{FFFFFF}] Gender: [{ADDBE6}%s{FFFFFF}]\n\n{FFFF00}OOC Information{FFFFFF}\nUsername: [{ADDBE6}%s{FFFFFF}] Time played: [{00EAFF}%d hours{FFFFFF}]", ReturnName(playerid), PlayerData[targetid][pOrigin], FormatNumber(PlayerData[playerid][pMoney]), FormatNumber(PlayerData[playerid][pBankMoney]), PlayerData[playerid][pPhone], Job_GetName(PlayerData[targetid][pJob]), Faction_GetName(playerid), Faction_GetRank(playerid), PlayerData[playerid][pMaskID], PlayerData[targetid][pBirthdate], (PlayerData[targetid][pGender] == 2) ? ("Female") : ("Male"), PlayerData[playerid][pUsername], PlayerData[targetid][pPlayingHours]);
 	 ShowPlayerDialog(playerid, DIALOG_STATS, DIALOG_STYLE_MSGBOX, "Character Statistic", string, "Close", "");
 	 return 1;
-}
+}*/
 
 CMD:buycomponent(playerid, params[])
 {
@@ -42810,11 +44384,17 @@ CMD:buycomponent(playerid, params[])
 
 CMD:changelog(playerid, params[])
 {
-ShowPlayerDialog(playerid, DIALOG_CHANGELOG, DIALOG_STYLE_MSGBOX, "Changelog", "{FFFFFF}Kunjungi {FFFF00}https://discord.gg/PhpyNp2qzt {FFFFFF}untuk melihat changelog!", "Close", "");
-return 1;
+	ShowPlayerDialog(playerid, DIALOG_CHANGELOG, DIALOG_STYLE_MSGBOX, "Changelog", "{FFFFFF}Kunjungi {FFFF00}https://discord.gg/PhpyNp2qzt {FFFFFF}untuk melihat changelog!", "Close", "");
+	return 1;
 }
 
 CMD:salary(playerid, params[])
+{
+	SendClientMessageEx(playerid, COLOR_LIGHTBLUE, "Total Salary: {00FF00}$%d", PlayerData[playerid][pPayCheck]);
+	SendClientMessageEx(playerid, COLOR_LIGHTBLUE, "INFO: {FFFFFF}Salary akan otomatis masuk ke Bank saat {FFFF00}Payday.");
+	return 1;
+}
+/*CMD:salary(playerid, params[])
 {
 ShowPlayerDialog(playerid, DIALOG_SALARY, DIALOG_STYLE_TABLIST_HEADERS, "Pending Salary",
 "Date\tIssuer\tAmount\n\
@@ -42822,38 +44402,86 @@ Sun, 31 Jan 2021, 18:01:02\tBlueberry Trucking Co.\t{00FF00}$1000\n\
 Sun, 31 Jan 2021, 18:01:02\tQuarry Miner Co.\t{00FF00}$550",
 "Close", "");
 return 1;
-}
+}*/
 
 CMD:help(playerid, params[])
 {
-ShowPlayerDialog(playerid, DIALOG_HELPCMD, DIALOG_STYLE_LIST, "Help Commands", "General Commands\nChat Commands\nFaction Commands\nBusiness Commands\nHouse Commands\nVehicle Commands\nJob Commands\nAnim Commands\nPhone Commands\nDonator Commands\nBank Commands\nRadio Commands", "Select", "Close");
-return 1;
+	ShowPlayerDialog(playerid, DIALOG_HELPCMD, DIALOG_STYLE_LIST, "Help Commands", "General Commands\nChat Commands\nFaction Commands\nBusiness Commands\nHouse Commands\nVehicle Commands\nJob Commands\nAnim Commands\nPhone Commands\nDonator Commands\nBank Commands\nRadio Commands", "Select", "Close");
+	return 1;
 }
 
+CMD:lift(playerid,params[])
+{
+	if(PlayerData[playerid][pJob] != JOB_MECHANIC)
+		return SendErrorMessage(playerid, "Kamu bukan seorang mekanik!");
+		
+	if(IsPlayerInRangeOfPoint(playerid, 1.0, 320.3362,-20.3055,1.5781))
+	{
+	    if(glift == false)
+	    {
+	        MoveDynamicObject(lift, 322.476196, -22.485137, 3.378123, 1.00, 0.000000, 0.000000, 90.000000);
+	        glift = true;
+	        SendClientMessage(playerid, COLOR_ORANGE, "Lift: UP");
+		}
+		else
+		{
+		    MoveDynamicObject(lift, 322.476196, -22.485137, 1.378123, 1.00, 0.000000, 0.000000, 90.000000);
+		    glift = false;
+		    SendClientMessage(playerid, COLOR_ORANGE, "Lift: DOWN");
+		}
+	}
+	else
+	{
+	    SendClientMessage(playerid, COLOR_LIGHTBLUE, "JOB: {FFFFFF}Kamu tidak berada dekat dengan Ramp Lift!");
+	}
+	return 1;
+}
+
+CMD:garage(playerid, params[])
+{
+	if (!IsPlayerInRangeOfPoint(playerid, 30, 319.4507,-25.4761,1.5781))
+	    return SendErrorMessage(playerid, "Kamu tidak berada dekat dengan Garasi!");
+	    
+	if(PlayerData[playerid][pJob] != JOB_MECHANIC)
+		return SendErrorMessage(playerid, "Kamu bukan seorang mekanik!");
+		
+	ShowPlayerDialog(playerid, DIALOG_GARASI, DIALOG_STYLE_LIST, "Garage Menu", "Garage 1\nGarage 2", "Choose", "Cancel");
+	return 1;
+}
+
+CMD:mm(playerid, params[])
+	return cmd_mechanicmenu(playerid, params);
+	
 CMD:mechanicmenu(playerid, params[])
 {
-if (PlayerData[playerid][pJob] != JOB_MECHANIC)
-return SendErrorMessage(playerid, "Kamu bukan seorang mekanik!");
-	    
-ShowPlayerDialog(playerid, DIALOG_MECHANICMENU, DIALOG_STYLE_LIST, "Mechanic Menu", "Repair Engine\nRepair Body\nInstall NOS", "Choose", "Cancel");
+	if (!IsPlayerInRangeOfPoint(playerid, 30, 319.4507,-25.4761,1.5781))
+	    return SendErrorMessage(playerid, "Kamu tidak berada di Mechanic Center!");
 
-return 1;
+	if(PlayerData[playerid][pJob] != JOB_MECHANIC)
+		return SendErrorMessage(playerid, "Kamu bukan seorang mekanik!");
+
+	if (!IsPlayerInAnyVehicle(playerid))
+	    return SendErrorMessage(playerid, "Kamu harus berada didalam KendaraaN!");
+
+	ShowPlayerDialog(playerid, DIALOG_MECHANICMENU, DIALOG_STYLE_LIST, "Mechanic Menu", "Repair Engine\nRepair Body\nInstall NOS", "Choose", "Cancel");
+	return 1;
 }
 
 CMD:repairengine(playerid, params[])
 {
- if (PlayerData[playerid][pJob] != JOB_MECHANIC)
- return SendErrorMessage(playerid, "Kamu bukan seorang mekanik!");
- 
- if (!Inventory_HasItem(playerid, "Component"))
- return SendErrorMessage(playerid, "Kamu tidak memiliki Component.");
- 
- if (Inventory_Count(playerid, "Component") < 200)
- return SendErrorMessage(playerid, "Kamu tidak memiliki Component yang cukup.");
- 
- SetTimerEx("EngineRepairTimer", 30000, false, "dd", playerid);
- SendClientMessage(playerid, COLOR_WHITE, "{ADDBE6}REPAIR: {FFFFFF}Harap tunggu {FFFF00}30 detik {FFFFFF}agar mesin kendaraan dapat diperbaiki.");
- return 1;
+	if (PlayerData[playerid][pJob] != JOB_MECHANIC)
+	return SendErrorMessage(playerid, "Kamu bukan seorang mekanik!");
+
+	if (!Inventory_HasItem(playerid, "Component"))
+	return SendErrorMessage(playerid, "Kamu tidak memiliki Component.");
+
+	if (Inventory_Count(playerid, "Component") < 200)
+	return SendErrorMessage(playerid, "Kamu tidak memiliki Component yang cukup.");
+
+	GameTextForPlayer(playerid, "~w~Repairing engine...", 30000, 3);
+	SetTimerEx("EngineRepairTimer", 30000, false, "dd", playerid);
+	SendClientMessage(playerid, COLOR_WHITE, "{ADDBE6}REPAIR: {FFFFFF}Harap tunggu {FFFF00}30 detik {FFFFFF}agar mesin kendaraan dapat diperbaiki.");
+	return 1;
 }
 
 CMD:repairbody(playerid, params[])
@@ -42884,6 +44512,7 @@ CMD:installnos(playerid, params[])
 	return SendErrorMessage(playerid, "Kamu tidak memiliki Component yang cukup.");
 
 	SetTimerEx("InstallNosTimer", 60000, false, "dd", playerid);
+	GameTextForPlayer(playerid, "~w~Repairing body...", 30000, 3);
 	SendClientMessage(playerid, COLOR_WHITE, "{ADDBE6}WORKSHOP: {FFFFFF}Harap tunggu {FFFF00}1 menit {FFFFFF}agar NOS dapat terpasang.");
 	return 1;
 }
@@ -42909,11 +44538,11 @@ CMD:wheels(playerid, params[])
 	return 1;
 }
 
-CMD:givecomponent(playerid, params[])
+/*CMD:givecomponent(playerid, params[])
 {
 Inventory_Add(playerid, "Component", 1575, 2000);
 return 1;
-}
+}*/
 
 CMD:harvest(playerid, params[])
 {
@@ -44132,14 +45761,10 @@ CMD:uncuff(playerid, params[])
     if (!PlayerData[userid][pCuffed])
         return SendErrorMessage(playerid, "The player is not cuffed at the moment.");
 
-	static
-	    string[64];
-
     PlayerData[userid][pCuffed] = 0;
     SetPlayerSpecialAction(userid, SPECIAL_ACTION_NONE);
 
-	format(string, sizeof(string), "You've been ~g~uncuffed~w~ by %s.", ReturnName(playerid, 0));
-    ShowPlayerFooter(userid, string);
+	SendClientMessageEx(userid, COLOR_YELLOW, "SERVER: {FFFFFF}You've been {00FFFF}Uncuffed {FFFFFF}by %s", ReturnName(playerid, 0));
 
     SendNearbyMessage(playerid, 30.0, COLOR_PURPLE, "** %s loosens the pair of handcuffs on %s's wrists.", ReturnName(playerid, 0), ReturnName(userid, 0));
     return 1;
@@ -44527,6 +46152,33 @@ CMD:m(playerid, params[])
 	return 1;
 }
 
+CMD:checkdamages(playerid, params[])
+{
+    new id;
+
+    if(sscanf(params, "u", id))
+        return SCM(playerid, 0xFF6347FF, "USAGE: {FFFFFF}/checkdamages [playerid/PartOfName]");
+
+    if(!IsPlayerConnected(id))
+        return SCM(playerid, 0xFF6347FF, "Invalid playerid.");
+
+    if(PlayerData[playerid][pAdmin] >= 1) //change this whatever
+    {
+        ShowPlayerDamages(id, playerid);
+    }
+    else
+    {
+        ShowPlayerDamages(id, playerid);
+    }
+    return 1;
+}
+
+CMD:damages(playerid, params[])
+{
+    ShowPlayerDamages(playerid, playerid);
+    return 1;
+}
+
 CMD:bandage(playerid, params[])
 {
     static
@@ -44785,7 +46437,7 @@ CMD:gps(playerid, params[])
 	if (PlayerData[playerid][pInjured] || PlayerData[playerid][pLoading] > 0 || PlayerData[playerid][pUnloading] != -1 || PlayerData[playerid][pDeliverShipment] > 0)
 	    return SendErrorMessage(playerid, "You can't use this command at the moment.");
 
-	Dialog_Show(playerid, MainGPS, DIALOG_STYLE_LIST, "GPS System", "Find House\nFind Business\nFind Entrance\nFind Job\nCustom Locations", "Select", "Cancel");
+	Dialog_Show(playerid, MainGPS, DIALOG_STYLE_LIST, "GPS System", "Find House\nFind Business\nFind Entrance\nMainJob\nSidejob\nCustom Locations", "Select", "Cancel");
 	return 1;
 }
 
@@ -45753,13 +47405,33 @@ CMD:editgate(playerid, params[])
 	return 1;
 }
 
+CMD:aname(playerid, params[])
+{
+    if(PlayerData[playerid][pAdmin] >= 8)
+	{
+        new giveplayerid, playerNameString[MAX_PLAYER_NAME];
+
+        if(sscanf(params, "us[24]", giveplayerid, playerNameString))
+		{
+            return SendClientMessage(playerid, COLOR_GREY,"/aname [playerid] [adminname]");
+        }
+        else
+		{
+            new messageString[1024];
+            format(messageString, sizeof(messageString), "%s has Changed Adminname %s to %s", PlayerData[playerid][pUsername], ReturnName(giveplayerid), playerNameString);
+            SendAdminAlert(COLOR_LIGHTRED, messageString);
+            format(PlayerData[giveplayerid][pForumName], MAX_PLAYER_NAME, "%s", playerNameString);
+		}
+	}
+	return 1;
+}
 CMD:givecash(playerid, params[])
 {
 	static
 		userid,
 	    amount;
 
-	if (PlayerData[playerid][pAdmin] < 5)
+	if (PlayerData[playerid][pAdmin] < 8)
 	    return SendErrorMessage(playerid, "Kamu tidak diizinkan menggunakan perintah ini!");
 
 	if (sscanf(params, "ud", userid, amount))
@@ -46511,7 +48183,7 @@ CMD:jobcmds(playerid, params[])
 {
 	switch (PlayerData[playerid][pJob])
 	{
-	    case 1: SendClientMessage(playerid, COLOR_CLIENT, "JOBS:{FFFFFF} /startdelivery, /stoploading, /unload, /shipments.");
+	    case 1: SendClientMessage(playerid, COLOR_CLIENT, "JOBS:{FFFFFF} /getcargo, /stoploading, /unload, /shipments.");
 	    case 2: SendClientMessage(playerid, COLOR_CLIENT, "JOBS:{FFFFFF} /repair, /nitrous.");
 	    case 3: SendClientMessage(playerid, COLOR_CLIENT, "JOBS:{FFFFFF} /taxi, /acceptcall.");
 	    case 4: SendClientMessage(playerid, COLOR_CLIENT, "JOBS:{FFFFFF} /loadcrate.");
@@ -46615,6 +48287,37 @@ CMD:disablecp(playerid, params[])
     SendServerMessage(playerid, "{FFFFFF}You have disabled any active checkpoints.");
     return 1;
 }
+
+/*CMD:countdown(playerid, params[])
+{
+	new time;
+
+	if (PlayerData[playerid][pAdmin] < 7)
+	    return SendErrorMessage(playerid, "Kamu tidak diizinkan menggunakan perintah ini!");
+
+	if (g_ServerRestart)
+	{
+	    TextDrawHideForAll(gServerTextdraws[3]);
+
+	    g_ServerRestart = 0;
+	    g_RestartTime = 0;
+
+	    return SendClientMessageToAllEx(COLOR_LIGHTRED, "AdmWarn: %s has postponed the server restart.", ReturnName(playerid, 0));
+	}
+	if (sscanf(params, "d", time))
+	    return SendSyntaxMessage(playerid, "/restart [seconds]");
+
+	if (time < 3 || time > 600)
+	    return SendErrorMessage(playerid, "The specified seconds can't be below 3 or above 600.");
+
+    TextDrawShowForAll(gServerTextdraws[3]);
+
+	g_ServerRestart = 1;
+	g_RestartTime = time;
+
+	SendClientMessageToAllEx(COLOR_LIGHTRED, "AdmWarn: %s has initiated a server restart in %d seconds.", ReturnName(playerid, 0), time);
+	return 1;
+}*/
 
 CMD:restart(playerid, params[])
 {
@@ -48981,10 +50684,10 @@ CMD:admins(playerid, params[])
     foreach (new i : Player) if (PlayerData[i][pAdmin] > 0 && PlayerData[i][pAdminHide] < 1)
 	{
         if (PlayerData[i][pAdminDuty])
-			SendClientMessageEx(playerid, COLOR_WHITE, "* (%s) %s (ID: %d), AOD: {00FF00}Yes",  AdminRankName(i), PlayerData[i][pUsername], i);
+			SendClientMessageEx(playerid, COLOR_WHITE, "* (%s) %s (ID: %d), Status: {00FF00}Administrating",  AdminRankName(i), PlayerData[i][pUsername], i);
 
 		else
-		    SendClientMessageEx(playerid, COLOR_WHITE, "* (%s) %s (ID: %d), AOD: {FF0000}No", AdminRankName(i), PlayerData[i][pUsername], i);
+		    SendClientMessageEx(playerid, COLOR_WHITE, "* (%s) %s (ID: %d), Status: {FF0000}Roleplaying", AdminRankName(i), PlayerData[i][pUsername], i);
 
         count++;
 	}
@@ -49118,7 +50821,7 @@ CMD:stoploading(playerid, params[])
 	return 1;
 }
 
-CMD:startdelivery(playerid, params[])
+CMD:getcargo(playerid, params[])
 {
  	new id = Job_NearestPoint(playerid);
 
@@ -49126,11 +50829,8 @@ CMD:startdelivery(playerid, params[])
 	    return SendErrorMessage(playerid, "You don't have the appropriate job.");
 
 	if (id == -1 || JobData[id][jobType] != JOB_COURIER)
-	    return SendErrorMessage(playerid, "You are not in range of any loading point.");
-
-	if (PlayerData[playerid][pLoadType] > 0)
-	    return SendErrorMessage(playerid, "You have already started a delivery.");
-
+	    return SendErrorMessage(playerid, "Kamu tidak berada di tempat pembelian Cargo");
+	    
     if (IsPlayerInAnyVehicle(playerid))
     	return SendErrorMessage(playerid, "You must exit the vehicle first.");
 
@@ -49627,7 +51327,7 @@ CMD:hduty(playerid, params[])
 
 	if (!PlayerData[playerid][pHelperDuty])
 	{
-		SetPlayerColor(playerid, COLOR_GREEN);
+		SetPlayerColor(playerid, COLOR_RED);
 
 		PlayerData[playerid][pHelperDuty] = 1;
 		SendHelperMessage(COLOR_GREEN, "[HELPER]: %s %s is now on Helper Duty. ", HelperRankName(playerid), ReturnName(playerid, 0), params);
@@ -50552,14 +52252,6 @@ CMD:billboards(playerid, params[])
 	ViewBillboards(playerid);
 	return 1;
 }
-/* MENGEROR
-C:\Users\USER\Downloads\High Mild Roleplay v0.1.2\gamemodes\High-Mild.pwn(1966 -- 1989) : error 001: expected token: ",", but found "-identifier-"
-C:\Users\USER\Downloads\High Mild Roleplay v0.1.2\gamemodes\High-Mild.pwn(1989) : warning 217: loose indentation
-C:\Users\USER\Downloads\High Mild Roleplay v0.1.2\gamemodes\High-Mild.pwn(1989 -- 1990) : warning 215: expression has no effect
-C:\Users\USER\Downloads\High Mild Roleplay v0.1.2\gamemodes\High-Mild.pwn(1990) : error 001: expected token: ";", but found ")"
-C:\Users\USER\Downloads\High Mild Roleplay v0.1.2\gamemodes\High-Mild.pwn(1990) : warning 217: loose indentation
-C:\Users\USER\Downloads\High Mild Roleplay v0.1.2\gamemodes\High-Mild.pwn(1990) : error 029: invalid expression, assumed zero
-C:\Users\USER\Downloads\High Mild Roleplay v0.1.2\gamemodes\High-Mild.pwn(1990) : fatal error 107: too many error messages on one line*/
 CMD:mybillboard(playerid, params[])
 {
 	if(PlayerData[playerid][pOwnsBillboard] == -1)
@@ -50573,12 +52265,27 @@ CMD:mybillboard(playerid, params[])
 
 public OnPlayerCommandPerformed(playerid, cmdtext[], success)
 {
-	if(!success) return SendClientMessage(playerid, COLOR_GREY, "ERROR: Unknown commands, type /help for show commands list");
+	if(!success) return SendClientMessageEx(playerid, COLOR_GREY, "ERROR: Unknown Command '%s', type '/help'", cmdtext);
 	return 1;
 }
 RGBAToARGB(rgba)
     return rgba >>> 8 | rgba << 24;
     
+forward TimeCarpenter(playerid);
+public TimeCarpenter(playerid)
+{
+	ApplyAnimation(playerid, "BSKTBALL", "null", 4.0, 0, 1, 1, 0, 0, 1);
+    ApplyAnimation(playerid, "BSKTBALL", "BBALL_pickup", 4.0, 0, 1, 1, 0, 0, 1);
+	SetPlayerSpecialAction(playerid, SPECIAL_ACTION_CARRY);
+	SetPlayerAttachedObject( playerid, 0, 2636, 1, 0.178045, 0.407681, -0.025817, 3.533153, 102.484672, 350.146301, 1.000000, 1.000000, 1.000000 );
+	TogglePlayerControllable(playerid, 1);
+	ClearAnimations(playerid);
+	DapatFurn[playerid] = 1;
+	SendClientMessage(playerid, COLOR_YELLOW, "SIDEJOB: {FFFFFF}Sukses membuat Furniture!");
+	SendClientMessage(playerid, COLOR_YELLOW, "SIDEJOB: {FFFFFF}Jual furniture di Furniture Warehouse!");
+	return 1;
+}
+
 forward TimeMiningBatu(playerid);
 public TimeMiningBatu(playerid)
 {
@@ -50646,4 +52353,14 @@ public TimeMiningBatu(playerid)
 	  	return 1;
  	}
   	return 1;
+}
+public OnPlayerClickMap(playerid, Float:fX, Float:fY, Float:fZ)
+{
+	if(ToggleTp[playerid] == 1)
+	{
+    	SetPlayerPosFindZ(playerid, fX, fY, fZ);
+    	SetPlayerInterior(playerid, 0);
+    	SetPlayerVirtualWorld(playerid, 0);
+    }
+    return 1;
 }
